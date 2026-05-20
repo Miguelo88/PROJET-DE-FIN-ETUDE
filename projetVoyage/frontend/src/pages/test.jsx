@@ -1,20 +1,6 @@
-import { useState } from "react";
-import  { useEffect } from 'react';
-
-import { useNavigate } from "react-router-dom";
-import {
-  Plane,
-  ArrowLeft,
-  Heart,
-  Globe,
-  User,
-  HelpCircle,
-  ChevronDown,
-  Menu,
-  X,
-  LogOut,
-  Settings,
-} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Plane, ArrowLeft, Heart, Globe, User, HelpCircle, ChevronDown, Menu, X, LogOut, Settings } from "lucide-react";
 
 // SVG icons pour les réseaux sociaux
 const GoogleIcon = () => (
@@ -52,21 +38,19 @@ const AppleIcon = () => (
 
 export function Header({ showBackButton = false }) {
   const navigate = useNavigate();
-  // const location = useLocation();
+  const location = useLocation();
   const [showLanguageMenu, setShowLanguageMenu] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showMobileLanguageMenu, setShowMobileLanguageMenu] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // eslint-disable-next-line no-undef
   useEffect(() => {
     const user = localStorage.getItem("currentUser");
     if (user) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrentUser(JSON.parse(user));
     }
-  }, []);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
@@ -130,7 +114,7 @@ export function Header({ showBackButton = false }) {
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <Plane className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold">TKSkySearch</h1>
+              <h1 className="text-xl font-bold">SkySearch</h1>
             </button>
           </div>
 
@@ -257,9 +241,7 @@ export function Header({ showBackButton = false }) {
                         <p className="text-sm font-medium text-gray-900">
                           {currentUser.name}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          {currentUser.email}
-                        </p>
+                        <p className="text-xs text-gray-500">{currentUser.email}</p>
                         {currentUser.provider && (
                           <p className="text-xs text-gray-400 mt-1">
                             Connecté via {currentUser.provider}
@@ -311,15 +293,21 @@ export function Header({ showBackButton = false }) {
               <Heart className="w-5 h-5" />
             </button>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button with User Avatar */}
             <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
-              className="text-gray-700 hover:text-blue-600 transition-colors p-2"
+              className="hover:opacity-80 transition-opacity flex items-center gap-2"
             >
-              {showMobileMenu ? (
-                <X className="w-6 h-6" />
+              {currentUser ? (
+                getUserAvatar()
               ) : (
-                <Menu className="w-6 h-6" />
+                <div className="text-gray-700 hover:text-blue-600 transition-colors p-2">
+                  {showMobileMenu ? (
+                    <X className="w-6 h-6" />
+                  ) : (
+                    <Menu className="w-6 h-6" />
+                  )}
+                </div>
               )}
             </button>
           </div>
@@ -339,9 +327,7 @@ export function Header({ showBackButton = false }) {
               {/* Language/Region Selector */}
               <div className="border-b border-gray-100">
                 <button
-                  onClick={() =>
-                    setShowMobileLanguageMenu(!showMobileLanguageMenu)
-                  }
+                  onClick={() => setShowMobileLanguageMenu(!showMobileLanguageMenu)}
                   className="w-full px-4 py-3 flex items-center justify-between text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-center gap-3">
@@ -420,9 +406,7 @@ export function Header({ showBackButton = false }) {
                         <p className="text-sm font-medium text-gray-900">
                           {currentUser.name}
                         </p>
-                        <p className="text-xs text-gray-500">
-                          {currentUser.email}
-                        </p>
+                        <p className="text-xs text-gray-500">{currentUser.email}</p>
                         {currentUser.provider && (
                           <p className="text-xs text-gray-400 mt-0.5">
                             via {currentUser.provider}
