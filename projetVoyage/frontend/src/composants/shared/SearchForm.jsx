@@ -353,10 +353,10 @@ export function SearchForm({ compact = false }) {
 
         {/* Additional Options */}
         <div className="flex gap-4 mt-4">
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+          {/* <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
             <input type="checkbox" className="w-4 h-4 accent-blue-600 rounded" />
             <span>Ajouter les aéroports à proximité</span>
-          </label>
+          </label> */}
           <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
             <input type="checkbox" className="w-4 h-4 accent-blue-600 rounded" />
             <span>Vols directs</span>

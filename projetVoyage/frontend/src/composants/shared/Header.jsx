@@ -59,7 +59,7 @@ export function Header({ showBackButton = false }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  // eslint-disable-next-line no-undef
+  
   useEffect(() => {
     const user = localStorage.getItem("currentUser");
     if (user) {
