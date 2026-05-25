@@ -182,10 +182,10 @@ export function Results() {
   }, [flights, priceRange, stops, selectedAirlines, sortBy, loading]);
 
   // Liste des compagnies uniques pour les filtres
-  const uniqueAirlines = Array.from(new Set(flights.map((f) => f.airline)));
+  const uniqueAirlines = Array
+.from(new Set(flights.map((f) => f.airline)));
 
-  // Récupération du nom de la ville (ex: "Yaoundé") à partir des aéroports
-  const originCity = airports.find((a) => a.code === origin)?.city || origin;
+  // Récupération du nom de la ville (ex: "Yaoundé") à partir des aéroports  const originCity = airports.find((a) => a.code === origin)?.city || origin;
   const destinationCity =
     airports.find((a) => a.code === destination)?.city || destination;
 
@@ -223,6 +223,7 @@ export function Results() {
         {/* Résumé de la recherche */}
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <h2 className="text-2xl font-bold mb-2">
+            // eslint-disable-next-line no-undef, no-undef
             {originCity} → {destinationCity}
           </h2>
           <p className="text-gray-600">

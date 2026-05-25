@@ -1,107 +1,3 @@
-// const bcrypt = require("bcryptjs");
-// const db = require("../config/connexionBD");
-
-// // inscription d'un nouvel utilisateur
-
-// const registerUser = (req, res) => {
-//   const { name, email, password } = req.body;
-
-//   // validation des champs côté serveur
-
-//   if (!name || !email || !password) {
-//     return res.status(400).json({ message: "Tous les champs sont requis" });
-//   }
-
-//   db.query(
-//     "SELECT * FROM users WHERE email = ?",
-//     [email],
-//     async (err, results) => {
-//       if (err) {
-//         console.error(err);
-//         return res.status(500).json({ message: "Erreur serveur" });
-//       }
-
-//       // verification de l'existance de l'email dans la base de données
-
-//       if (results.length > 0) {
-//         return res.status(409).json({ message: "Cet email est déjà utilisé" });
-//       }
-
-//       // hachage du mot de passe avec bcrypt (10 rounds)
-
-//       const hashedPassword = await bcrypt.hash(password, 10);
-
-//       // insertion de l'utilisateur dans la base de données
-
-//       db.query(
-//         "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-//         [name, email, hashedPassword],
-//         (err2, result) => {
-//           if (err2) {
-//             console.error(err2);
-//             return res
-//               .status(500)
-//               .json({ message: "Erreur lors de l'inscription" });
-//           }
-//           // reponse avec succès si l'utilisateur est créé avec succès
-
-//           return res.status(201).json({
-//             message: "Utilisateur créé avec succès",
-//             userId: result.insertId,
-//           });
-//         },
-//       );
-//     },
-//   );
-// };
-
-// module.exports = { registerUser };
-
-
-// const bcrypt = require("bcryptjs");
-// const connectDB = require("../config/connexionBD");
-
-// async function registerUser(req, res) {
-//   try {
-//     const { name, email, password } = req.body;
-
-//     if (!name || !email || !password) {
-//       return res.status(400).json({ message: "Champs requis manquants" });
-//     }
-
-//     // Récupération de l'instance de la base de données
-//     const db = await connectDB();
-
-//     // Remplacement de db.query par db.execute
-//     const [existingUsers] = await db.execute(
-//       "SELECT id FROM users WHERE email = ?",
-//       [email]
-//     );
-
-//     if (existingUsers.length > 0) {
-//       return res.status(409).json({ message: "Cet email est déjà utilisé" });
-//     }
-
-//     const hashedPassword = await bcrypt.hash(password, 10);
-
-//     const [result] = await db.execute(
-//       "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
-//       [name, email, hashedPassword]
-//     );
-
-//     return res.status(201).json({
-//       message: "Utilisateur créé avec succès",
-//       userId: result.insertId,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).json({ message: "Erreur serveur" });
-//   }
-// }
-
-// module.exports = { registerUser };
-
-
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken"); // Pour générer le JWT perso
 const connectDB = require("../config/connexionBD");
@@ -201,7 +97,7 @@ async function googleLogin(req, res) {
       id: user.id,
       email: user.email,
       name: user.name,
-      provider: user.provider || "local", // "local" = inscription classique
+      // provider: user.provider || "local", // "local" = inscription classique
     };
 
     // 🔐 3. Génère un JWT personnalisé (valable 24h par exemple)
@@ -216,7 +112,7 @@ async function googleLogin(req, res) {
         id: user.id,
         email: user.email,
         name: user.name,
-        provider: user.provider,
+        // provider: user.provider,
       },
       token: jwtToken, // 👈 Ton JWT à stocker dans localStorage / cookie
     });
@@ -226,5 +122,63 @@ async function googleLogin(req, res) {
   }
 }
 
+async function loginUser(req, res) {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: "Veuillez remplir tous les champs" });
+    }
+
+    const db = await connectDB();
+      // j'ai supprime provider car il n'est pas dans ma table users et ca me generait une erreur, si tu veux le remettre pense a l'ajouter dans ta table users
+    const [users] = await db.execute(
+      "SELECT id, name, email, password FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (users.length === 0) {
+      return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+    }
+
+    const user = users[0];
+
+    if (!user.password) {
+      return res.status(400).json({
+        message: "Ce compte a été créé avec un fournisseur externe",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Email ou mot de passe incorrect" });
+    }
+
+    const payload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      // provider: user.provider || "local",
+    };
+
+    const token = jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
+
+    return res.status(200).json({
+      message: "Connexion réussie",
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        // provider: user.provider || "local",
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
 // 🔽 On exporte les deux fonctions
-module.exports = { registerUser, googleLogin };
+module.exports = { registerUser, googleLogin,loginUser };

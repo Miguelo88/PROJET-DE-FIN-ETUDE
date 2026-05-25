@@ -1,7 +1,13 @@
 const express = require("express");
 const cors = require("cors");
+require("dotenv").config();
+
+
 const authRoutes = require("./routes/authRoutes");
-const { registerUser, googleLogin } = require("./controllers/authController");
+const flightsRoutes = require("./routes/flightsRoutes");
+
+
+const { registerUser, googleLogin,loginUser } = require("./controllers/authController");
 require("./config/connexionBD"); // ← ta connexion déjà prête à la base
 
 // Pour vérifier les jetons Google
@@ -18,6 +24,10 @@ app.use(
 
 // Parser le JSON
 app.use(express.json());
+
+// 4. L'utilisation de vos routes (APRES l'initialisation de 'app')
+app.use("/api/flights", flightsRoutes); // Déplacé ici, le serveur ne crachera plus !
+
 
 // Route de test
 app.get("/test", (req, res) => {
@@ -102,9 +112,13 @@ app.post("/api/auth/google", async (req, res) => {
 
 // Routes d'authentification classiques (register, login, etc.)
 app.post("/api/auth/register", registerUser);
-app.post("/api/auth/login", googleLogin);
+app.post("/api/auth/login", loginUser);
+app.post("/api/auth/google", googleLogin);
+ // nouvelle route pour le login classique
 // Si tu ajoutes plus tard un système de login/email ou d’autres routes
 // app.use("/api/auth", authRoutes);
+
+// app.use("/api/flights", flightsRoutes);
 
 // Port unique utilisé par ton backend (React se connecte sur localhost:3000)
 app.listen(3000, () => {
