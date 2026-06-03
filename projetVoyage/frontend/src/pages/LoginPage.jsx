@@ -1,8 +1,96 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Mail, Lock, AlertCircle } from "lucide-react";
+// import { GoogleLogin } from "@react-oauth/google";
+
 
 export function LoginPage() {
+  // const navigate = useNavigate();
+  // const [formData, setFormData] = useState({
+  //   email: "",
+  //   password: "",
+  // });
+  // const [error, setError] = useState("");
+  // const [loading, setLoading] = useState(false);
+
+  // // --- Google Login (tu passes le token à ton backend Node.js) ---
+  // const handleGoogleSuccess = async (credentialResponse) => {
+  //   console.log("Jeton JWT reçu du Frontend :", credentialResponse.credential);
+
+  //   try {
+  //     const response = await fetch("http://localhost:3000/api/auth/google", {
+  //       method: "POST",
+  //       headers: { "Content-Type": "application/json" },
+  //       body: JSON.stringify({ token: credentialResponse.credential }),
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (response.ok) {
+  //       console.log("Utilisateur Google connecté avec succès !", data);
+  //       // Ici tu peux stocker ton propre token (JWT) et rediriger
+  //       // ex: localStorage.setItem("token", data.token);
+  //       localStorage.setItem("token", data.token);
+  //       localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+  //       // eslint-disable-next-line no-undef
+  //       setIsSuccess(true);
+  //       setTimeout(() => navigate("/"), 2000);
+  //     } else {
+  //       // eslint-disable-next-line no-undef
+  //       setErrors({
+  //         general: data.message || "Erreur lors de la connexion Google",
+  //       });
+  //     }
+  //     // eslint-disable-next-line no-unused-vars
+  //   } catch (error) {
+  //     // eslint-disable-next-line no-undef
+  //     setErrors({ general: "Impossible de contacter le serveur Google" });
+  //   }
+  // };
+
+  // const handleGoogleError = () => {
+  //   console.log("La connexion Google a échoué");
+  //   // eslint-disable-next-line no-undef
+  //   setErrors({ general: "Échec de la connexion Google" });
+  // };
+  // Fin logique Google
+
+
+  // const handleSubmit = async (e) => {
+  //   e.preventDefault();
+  //   setError("");
+  //   setLoading(true);
+
+  //   try {
+  //     const response = await fetch("http://localhost:3000/api/auth/login", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify(formData),
+  //     });
+
+  //     const data = await response.json();
+
+  //     if (!response.ok) {
+  //       setError(data.message || "Email ou mot de passe incorrect");
+  //       setLoading(false);
+  //       return;
+  //     }
+
+  //     localStorage.setItem("token", data.token);
+  //     localStorage.setItem("currentUser", JSON.stringify(data.user));
+
+  //     navigate("/", { replace: true });
+  //     window.location.reload();
+  //   // eslint-disable-next-line no-unused-vars
+  //   } catch (error) {
+  //     setError("Erreur serveur");
+  //     setLoading(false);
+  //   }
+  // };
+
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: "",
@@ -33,17 +121,31 @@ export function LoginPage() {
         return;
       }
 
+      // ✅ Stocker le token et l'utilisateur
       localStorage.setItem("token", data.token);
       localStorage.setItem("currentUser", JSON.stringify(data.user));
 
-      navigate("/", { replace: true });
-      window.location.reload();
-    // eslint-disable-next-line no-unused-vars
+      // ✅ Log pour déboguer
+      console.log("🟡 Rôle utilisateur:", data.user.role);
+      console.log("🟡 isAdmin:", data.user.isAdmin);
+
+      // ✅ Redirection selon le rôle
+      if (data.user.role === "admin" || data.user.isAdmin === true) {
+        console.log("🔵 Redirection vers /admin");
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        console.log("🔵 Redirection vers /");
+        navigate("/", { replace: true });
+      }
+
+      // eslint-disable-next-line no-unused-vars
     } catch (error) {
+      console.error("❌ Erreur de connexion:", error);
       setError("Erreur serveur");
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
@@ -56,8 +158,14 @@ export function LoginPage() {
         <div className="px-6 py-5">
           <div className="relative mb-5">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300"></div>
+              
+              <div className="w-full border-t border-gray-300">
+                
+              </div>
+              
             </div>
+            
+            
             <div className="relative flex justify-center text-sm">
               <span className="px-2 bg-white text-gray-500">
                 Confirmer à partir de votre email et mot de passe

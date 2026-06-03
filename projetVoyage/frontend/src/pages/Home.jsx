@@ -1,9 +1,8 @@
 import { SearchForm } from "../composants/shared/SearchForm";
 import { Header } from "../composants/shared/Header";
 import { Footer } from "../composants/shared/Footer";
-import { ImageWithFallback } from "../composants/shared/ImageWithFallback";  
+import { ImageWithFallback } from "../composants/shared/ImageWithFallback";
 import { Plane } from "lucide-react";
-
 
 export function Home() {
   return (
@@ -61,7 +60,9 @@ export function Home() {
                 />
               </svg>
             </div>
-            <h3 className="font-semibold text-white mb-2">Réservation facile</h3>
+            <h3 className="font-semibold text-white mb-2">
+              Réservation facile
+            </h3>
             <p className="text-blue-100 text-sm">
               Processus de réservation simple et sécurisé
             </p>

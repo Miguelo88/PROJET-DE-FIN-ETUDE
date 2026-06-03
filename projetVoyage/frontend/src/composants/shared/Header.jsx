@@ -1,5 +1,5 @@
 import { useState } from "react";
-import  { useEffect } from 'react';
+import { useEffect } from "react";
 
 import { useNavigate } from "react-router-dom";
 import {
@@ -59,7 +59,8 @@ export function Header({ showBackButton = false }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
 
-  
+  const [showAuthAlert, setShowAuthAlert] = useState(false);
+
   useEffect(() => {
     const user = localStorage.getItem("currentUser");
     if (user) {
@@ -74,6 +75,15 @@ export function Header({ showBackButton = false }) {
     setShowUserMenu(false);
     setShowMobileMenu(false);
     navigate("/");
+  };
+
+  const handleFavoritesClick = () => {
+    if (currentUser) {
+      navigate("/user/favorites");
+    } else {
+     setShowAuthAlert(true);
+      setTimeout(() => setShowAuthAlert(false), 3000);
+    }
   };
 
   const getUserAvatar = () => {
@@ -109,6 +119,11 @@ export function Header({ showBackButton = false }) {
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
+       {showAuthAlert && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+          <p className="text-sm font-medium">Veuillez vous connecter ou créer un compte</p>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Left Section */}
@@ -212,6 +227,7 @@ export function Header({ showBackButton = false }) {
 
             {/* Favorites */}
             <button
+              onClick={handleFavoritesClick}
               className="flex items-center gap-2 text-gray-700 hover:text-red-500 transition-colors"
               title="Favoris"
             >
@@ -304,7 +320,14 @@ export function Header({ showBackButton = false }) {
           {/* Right Section - Mobile */}
           <div className="flex md:hidden items-center gap-3">
             {/* Favorites - Always visible on mobile */}
+            {showAuthAlert && (
+              <div className="fixed top-4 right-4 bg-yellow-100 text-yellow-800 px-4 py-3 rounded-lg shadow-md z-50">
+                Veuillez créer un compte ou vous connecter
+              </div>
+            )}
+
             <button
+              onClick={handleFavoritesClick}
               className="text-gray-700 hover:text-red-500 transition-colors"
               title="Favoris"
             >

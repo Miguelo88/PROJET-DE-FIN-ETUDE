@@ -91,10 +91,7 @@ function TableCell({ className, ...props }) {
   );
 }
 
-function TableCaption({
-  className,
-  ...props
-}) {
+function TableCaption({ className, ...props }) {
   return (
     <caption
       data-slot="table-caption"

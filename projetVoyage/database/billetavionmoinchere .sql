@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  Dim 17 mai 2026 à 23:53
+-- Généré le :  ven. 29 mai 2026 à 19:17
 -- Version du serveur :  5.7.23
 -- Version de PHP :  7.2.10
 
@@ -143,10 +143,25 @@ CREATE TABLE IF NOT EXISTS `users` (
   `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
   `email` varchar(150) COLLATE utf8mb4_unicode_ci NOT NULL,
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `role` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'user',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Déchargement des données de la table `users`
+--
+
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`) VALUES
+(11, 'Jean miguel', 'jean.miguel@example.com', '$2b$10$BzYOP43alO8x6gBQqoPuUu58LWaSlRNUiv8cc7xazBBmbJlP3Jcmm', 'user', '2026-05-20 00:01:19'),
+(12, 'Miguel Kamdem', 'miguelkamdem92@gmail.com', '$2b$10$9Sn25BmIMepWl/3gDfYEmONMybRgSff4f4eHp27u98EyETZVTgA5W', 'admin', '2026-05-20 00:02:13'),
+(13, 'test2', 'test01@gmail.com', '$2b$10$BL1s3zg3Gvi1Hbl9pC1LjOXQRiwTZdz8wqOGOxdFiqxtHIlUJt4Iq', 'user', '2026-05-20 01:19:21'),
+(14, 'mariane fernanda', 'marianne09@gmail.com', '$2b$10$FfRU0H0k.YXcvGSjnDHb0OefsxlsVICOhcYAOvSv/GO2OSFeTK3Wu', 'user', '2026-05-21 21:48:56'),
+(15, 'MBERE TEMWA JOSUE', 'josuemberetemwa@gmail.com', 'OAUTH_GOOGLE', 'user', '2026-05-24 00:06:03'),
+(16, 'test1', 'test1@gmail.com', '$2b$10$NIfxJkpo4/AHRwcCdkdp3eLraGDYzGO04X24SAxz7Cwzaf6HAl/Ju', 'user', '2026-05-24 23:11:16'),
+(17, 'test', 'test@gmail.com', '$2b$10$dDUnen/7gW79wujWduMRQefIoawiqQu5cgeWmOj0mUesMCazeYhHW', 'user', '2026-05-24 23:28:58'),
+(18, 'test', 'test0@gmail.com', '$2b$10$uF3GSkFvJ0h2Trqjw0USEOhb5lNggo4Hs7Q8i8NcjCrW3UeUyeWVm', 'user', '2026-05-24 23:30:11');
 
 -- --------------------------------------------------------
 

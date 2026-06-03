@@ -29,10 +29,6 @@ app.use(express.json());
 app.use("/api/flights", flightsRoutes); // Déplacé ici, le serveur ne crachera plus !
 
 
-// Route de test
-app.get("/test", (req, res) => {
-  res.json({ message: "Backend OK" });
-});
 
 // Google Auth : vérification du jeton + logique utilisateur/connexion
 const CLIENT_ID =
@@ -114,6 +110,14 @@ app.post("/api/auth/google", async (req, res) => {
 app.post("/api/auth/register", registerUser);
 app.post("/api/auth/login", loginUser);
 app.post("/api/auth/google", googleLogin);
+
+
+// Exemple de route admin protégée
+const { authenticateToken, requireAdmin } = require("./middleware/auth");
+
+app.get("/api/admin/dashboard", authenticateToken, requireAdmin, (req, res) => {
+  res.json({ message: "Bienvenue sur le dashboard admin !", user: req.user });
+});
  // nouvelle route pour le login classique
 // Si tu ajoutes plus tard un système de login/email ou d’autres routes
 // app.use("/api/auth", authRoutes);
