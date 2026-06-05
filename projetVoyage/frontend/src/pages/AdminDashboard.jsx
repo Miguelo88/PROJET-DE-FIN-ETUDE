@@ -6,13 +6,18 @@ import {
   CreditCard,
   TrendingUp,
   Shield,
-//   Settings,
+  //   Settings,
   LogOut,
   Bell,
   Search,
   BarChart3,
 } from "lucide-react";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../composants/UI/Tabs";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "../composants/UI/Tabs";
 import { UserManagement } from "../composants/admin/UserManagement";
 import { FlightManagement } from "../composants/admin/FlightManagement";
 import { FinancialManagement } from "../composants/admin/FinancialManagement";
@@ -23,19 +28,46 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [activeTab, setActiveTab] = useState("users");
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    totalFlights: 0,
+    totalAdmins: 0,
+    totalAlerts: 0,
+  });
+
+  const fetchAdminStats = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/admin/dashboard", {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de récupérer les statistiques admin");
+      }
+
+      const data = await response.json();
+      setDashboardStats(data);
+    } catch (error) {
+      console.error("Erreur fetching admin dashboard stats:", error);
+    }
+  };
 
   useEffect(() => {
     // Vérifier si l'utilisateur est connecté et est admin
     const user = JSON.parse(localStorage.getItem("currentUser") || "null");
-    
+
     if (!user || !user.isAdmin) {
       // Rediriger si pas admin
       navigate("/");
       return;
     }
-    
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentUser(user);
+    fetchAdminStats();
   }, [navigate]);
 
   const handleLogout = () => {
@@ -95,6 +127,13 @@ export function AdminDashboard() {
                 </div>
               </div>
 
+              <button
+                onClick={() => navigate("/")}
+                className="px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Page principale
+              </button>
+
               {/* Logout */}
               <button
                 onClick={handleLogout}
@@ -119,10 +158,14 @@ export function AdminDashboard() {
               <div className="p-2 bg-blue-100 rounded-lg">
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
-              <span className="text-xs text-green-600 font-medium">+12%</span>
+              <span className="text-xs text-green-600 font-medium">
+                Données réelles
+              </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">2,847</h3>
-            <p className="text-sm text-gray-500">Utilisateurs actifs</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {dashboardStats.totalUsers}
+            </h3>
+            <p className="text-sm text-gray-500">Utilisateurs inscrits</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
@@ -130,10 +173,14 @@ export function AdminDashboard() {
               <div className="p-2 bg-purple-100 rounded-lg">
                 <Plane className="w-6 h-6 text-purple-600" />
               </div>
-              <span className="text-xs text-green-600 font-medium">+8%</span>
+              <span className="text-xs text-green-600 font-medium">
+                Données réelles
+              </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">1,234</h3>
-            <p className="text-sm text-gray-500">Vols disponibles</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {dashboardStats.totalFlights}
+            </h3>
+            <p className="text-sm text-gray-500">Vols enregistrés</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
@@ -141,10 +188,14 @@ export function AdminDashboard() {
               <div className="p-2 bg-green-100 rounded-lg">
                 <CreditCard className="w-6 h-6 text-green-600" />
               </div>
-              <span className="text-xs text-green-600 font-medium">+23%</span>
+              <span className="text-xs text-green-600 font-medium">
+                Données réelles
+              </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">€127.5K</h3>
-            <p className="text-sm text-gray-500">Revenus ce mois</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {dashboardStats.totalAdmins}
+            </h3>
+            <p className="text-sm text-gray-500">Administrateurs</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
@@ -152,10 +203,14 @@ export function AdminDashboard() {
               <div className="p-2 bg-orange-100 rounded-lg">
                 <BarChart3 className="w-6 h-6 text-orange-600" />
               </div>
-              <span className="text-xs text-green-600 font-medium">+15%</span>
+              <span className="text-xs text-green-600 font-medium">
+                Données réelles
+              </span>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900">87.3%</h3>
-            <p className="text-sm text-gray-500">Taux de conversion</p>
+            <h3 className="text-2xl font-bold text-gray-900">
+              {dashboardStats.totalAlerts}
+            </h3>
+            <p className="text-sm text-gray-500">Alertes enregistrées</p>
           </div>
         </div>
 

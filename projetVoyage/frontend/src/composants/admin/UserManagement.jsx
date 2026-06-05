@@ -51,35 +51,110 @@ export function UserManagement() {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    setUsers(storedUsers);
+  const loadUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/admin/users", {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de récupérer les utilisateurs");
+      }
+
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error("Erreur chargement utilisateurs :", error);
+      setUsers([]);
+    }
   };
 
   const saveUsers = (updatedUsers) => {
-    localStorage.setItem("users", JSON.stringify(updatedUsers));
     setUsers(updatedUsers);
   };
 
-  const toggleBlockUser = (email) => {
-    const updatedUsers = users.map((user) =>
-      user.email === email ? { ...user, blocked: !user.blocked } : user
-    );
-    saveUsers(updatedUsers);
+  const toggleBlockUser = async (email) => {
+    try {
+      const target = users.find((user) => user.email === email);
+      if (!target) return;
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/users/${target.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({ action: "toggleBlock" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de modifier le statut du compte");
+      }
+
+      const updatedUser = await response.json();
+      saveUsers(
+        users.map((user) => (user.email === email ? updatedUser : user)),
+      );
+    } catch (error) {
+      console.error("Erreur blocage utilisateur :", error);
+    }
   };
 
-  const deleteUser = (email) => {
-    const updatedUsers = users.filter((user) => user.email !== email);
-    saveUsers(updatedUsers);
-    setDeleteDialogOpen(false);
-    setSelectedUser(null);
+  const deleteUser = async (email) => {
+    try {
+      const target = users.find((user) => user.email === email);
+      if (!target) return;
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/users/${target.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de supprimer l'utilisateur");
+      }
+
+      saveUsers(users.filter((user) => user.email !== email));
+      setDeleteDialogOpen(false);
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Erreur suppression utilisateur :", error);
+    }
   };
 
-  const toggleAdminRole = (email) => {
-    const updatedUsers = users.map((user) =>
-      user.email === email ? { ...user, isAdmin: !user.isAdmin } : user
-    );
-    saveUsers(updatedUsers);
+  const toggleAdminRole = async (email) => {
+    try {
+      const target = users.find((user) => user.email === email);
+      if (!target) return;
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/users/${target.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({ action: "toggleAdmin" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de modifier le rôle admin");
+      }
+
+      const updatedUser = await response.json();
+      saveUsers(
+        users.map((user) => (user.email === email ? updatedUser : user)),
+      );
+    } catch (error) {
+      console.error("Erreur changement droit admin :", error);
+    }
   };
 
   const filteredUsers = users.filter((user) => {
@@ -101,7 +176,9 @@ export function UserManagement() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h2>
+          <h2 className="text-2xl font-bold text-gray-900">
+            Gestion des Utilisateurs
+          </h2>
           <p className="text-sm text-gray-500 mt-1">
             Gérez les comptes clients, partenaires et administrateurs
           </p>
@@ -188,7 +265,10 @@ export function UserManagement() {
           <TableBody>
             {filteredUsers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell
+                  colSpan={6}
+                  className="text-center py-8 text-gray-500"
+                >
                   Aucun utilisateur trouvé
                 </TableCell>
               </TableRow>
@@ -201,8 +281,10 @@ export function UserManagement() {
                         {user.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <div className="font-medium text-gray-900">{user.name}</div>
-                        <div className="text-sm text-gray-500">{user.provider}</div>
+                        <div className="font-medium text-gray-900">
+                          {user.name}
+                        </div>
+                        <div className="text-sm text-gray-500">{user.role}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -225,7 +307,9 @@ export function UserManagement() {
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Calendar className="w-4 h-4" />
-                      {new Date(user.registrationDate).toLocaleDateString("fr-FR")}
+                      {new Date(user.registrationDate).toLocaleDateString(
+                        "fr-FR",
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -298,7 +382,8 @@ export function UserManagement() {
             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
             <AlertDialogDescription>
               Êtes-vous sûr de vouloir supprimer l'utilisateur{" "}
-              <strong>{selectedUser?.name}</strong> ? Cette action est irréversible.
+              <strong>{selectedUser?.name}</strong> ? Cette action est
+              irréversible.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

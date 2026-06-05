@@ -31,7 +31,6 @@ import {
 } from "../UI/Dialog";
 import { Label } from "../UI/Label";
 import { Input } from "../UI/Input";
-import { generateMockFlights } from "../../data/mockFlights";
 
 export function FlightManagement() {
   const [flights, setFlights] = useState([]);
@@ -49,38 +48,79 @@ export function FlightManagement() {
   });
 
   useEffect(() => {
-    // Charger les vols depuis le localStorage ou utiliser les vols mock
-    const storedFlights = localStorage.getItem("adminFlights");
-    if (storedFlights) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setFlights(JSON.parse(storedFlights));
-    } else {
-      setFlights(generateMockFlights());
-    }
+    // eslint-disable-next-line react-hooks/immutability
+    loadFlights();
   }, []);
 
+  const loadFlights = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch("/api/admin/flights", {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de charger les vols");
+      }
+
+      const data = await response.json();
+      setFlights(data);
+    } catch (error) {
+      console.error("Erreur chargement vols admin :", error);
+      setFlights([]);
+    }
+  };
+
   const saveFlights = (updatedFlights) => {
-    localStorage.setItem("adminFlights", JSON.stringify(updatedFlights));
     setFlights(updatedFlights);
   };
 
-  const handleAddOrUpdateFlight = () => {
-    if (editingFlight) {
-      // Update existing flight
-      const updatedFlights = flights.map((f) =>
-        f.id === editingFlight.id ? { ...f, ...formData } : f
-      );
-      saveFlights(updatedFlights);
-    } else {
-      // Add new flight
-      const newFlight = {
-        id: `FL${Date.now()}`,
-        ...formData,
+  const handleAddOrUpdateFlight = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const payload = {
+        airline: formData.airline,
+        departureCity: formData.departureCity,
+        arrivalCity: formData.arrivalCity,
+        departureTime: formData.departureTime,
+        arrivalTime: formData.arrivalTime,
+        price: formData.price,
+        duration: formData.duration,
+        stops: formData.stops,
       };
-      saveFlights([...flights, newFlight]);
+
+      const url = editingFlight
+        ? `/api/admin/flights/${editingFlight.id}`
+        : "/api/admin/flights";
+      const method = editingFlight ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible d'enregistrer le vol");
+      }
+
+      const savedFlight = await response.json();
+      if (editingFlight) {
+        saveFlights(
+          flights.map((f) => (f.id === savedFlight.id ? savedFlight : f)),
+        );
+      } else {
+        saveFlights([savedFlight, ...flights]);
+      }
+    } catch (error) {
+      console.error("Erreur sauvegarde vol :", error);
     }
 
-    // Reset form
     setFormData({
       airline: "",
       departureCity: "",
@@ -95,16 +135,50 @@ export function FlightManagement() {
     setDialogOpen(false);
   };
 
-  const toggleVisibility = (id) => {
-    const updatedFlights = flights.map((f) =>
-      f.id === id ? { ...f, hidden: !f.hidden } : f
-    );
-    saveFlights(updatedFlights);
+  const toggleVisibility = async (id) => {
+    try {
+      const current = flights.find((flight) => flight.id === id);
+      if (!current) return;
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/flights/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+        body: JSON.stringify({ hidden: !current.hidden }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de modifier la visibilité");
+      }
+
+      const updatedFlight = await response.json();
+      saveFlights(flights.map((f) => (f.id === id ? updatedFlight : f)));
+    } catch (error) {
+      console.error("Erreur changement visibilité :", error);
+    }
   };
 
-  const deleteFlight = (id) => {
-    const updatedFlights = flights.filter((f) => f.id !== id);
-    saveFlights(updatedFlights);
+  const deleteFlight = async (id) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`/api/admin/flights/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: token ? `Bearer ${token}` : "",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de supprimer le vol");
+      }
+
+      saveFlights(flights.filter((f) => f.id !== id));
+    } catch (error) {
+      console.error("Erreur suppression vol :", error);
+    }
   };
 
   const openEditDialog = (flight) => {
@@ -141,7 +215,10 @@ export function FlightManagement() {
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openAddDialog} className="gap-2 bg-purple-600 hover:bg-purple-700">
+            <Button
+              onClick={openAddDialog}
+              className="gap-2 bg-purple-600 hover:bg-purple-700"
+            >
               <Plus className="w-4 h-4" />
               Ajouter un vol
             </Button>
@@ -279,7 +356,9 @@ export function FlightManagement() {
               <Plane className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-900">{flights.length}</p>
+              <p className="text-2xl font-bold text-blue-900">
+                {flights.length}
+              </p>
               <p className="text-sm text-blue-600">Total de vols</p>
             </div>
           </div>
@@ -332,13 +411,19 @@ export function FlightManagement() {
           <TableBody>
             {flights.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                <TableCell
+                  colSpan={8}
+                  className="text-center py-8 text-gray-500"
+                >
                   Aucun vol disponible
                 </TableCell>
               </TableRow>
             ) : (
               flights.map((flight) => (
-                <TableRow key={flight.id} className={flight.hidden ? "opacity-50" : ""}>
+                <TableRow
+                  key={flight.id}
+                  className={flight.hidden ? "opacity-50" : ""}
+                >
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Plane className="w-4 h-4 text-gray-400" />
@@ -363,8 +448,12 @@ export function FlightManagement() {
                     <span className="text-sm">{flight.duration}</span>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={flight.stops === 0 ? "default" : "secondary"}>
-                      {flight.stops === 0 ? "Direct" : `${flight.stops} escale(s)`}
+                    <Badge
+                      variant={flight.stops === 0 ? "default" : "secondary"}
+                    >
+                      {flight.stops === 0
+                        ? "Direct"
+                        : `${flight.stops} escale(s)`}
                     </Badge>
                   </TableCell>
                   <TableCell>
