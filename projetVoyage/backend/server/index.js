@@ -5,6 +5,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const flightsRoutes = require("./routes/flightsRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const userRoutes = require("./routes/userRoutes");
 require("./config/connexionBD"); // ← ta connexion déjà prête à la base
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 app.use("/api/flights", flightsRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/user", userRoutes);
 
 // Port unique utilisé par ton backend (React se connecte sur localhost:3000)
 app.listen(3000, () => {

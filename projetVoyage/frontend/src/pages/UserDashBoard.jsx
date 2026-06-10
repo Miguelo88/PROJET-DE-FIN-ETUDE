@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Plane,
@@ -35,11 +35,11 @@ export function UserDashboard() {
   // Onglet actif dans le dashboard
   const [activeTab, setActiveTab] = useState("favorites");
 
-  // Vols favoris sauvegardés dans localStorage
-  const [savedFlights, setSavedFlights] = useState(() => {
-    const favorites = localStorage.getItem("favoriteFlights");
-    return favorites ? JSON.parse(favorites) : [];
-  });
+  // Vols favoris stockés en base de données
+  const [savedFlights, setSavedFlights] = useState([]);
+
+  // Voyages utilisateur récupérés depuis MySQL
+  const [userTrips, setUserTrips] = useState([]);
 
   // Données du profil pré-remplies à partir de l'utilisateur connecté
   const [profileData, setProfileData] = useState(() => {
@@ -89,16 +89,7 @@ export function UserDashboard() {
   ]);
 
   // Alertes de prix sur des trajets
-  const [priceAlertsData, setPriceAlertsData] = useState([
-    {
-      id: "alert-1",
-      from: "Paris",
-      to: "Tokyo",
-      description: "Départ flexible en juillet 2026",
-      target: "moins de 600 €",
-      active: true,
-    },
-  ]);
+  const [priceAlertsData, setPriceAlertsData] = useState([]);
 
   // Préférences de notification utilisateur
   const [notificationSettings, setNotificationSettings] = useState([
@@ -133,6 +124,17 @@ export function UserDashboard() {
   // Crédit voyage disponible
   const [travelCredit, setTravelCredit] = useState(0);
 
+  // Chargement des données depuis l'API utilisateur
+  const [ setLoading] = useState(false);
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem("token");
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+  };
+
   // Affiche un message temporaire
   const showMessage = (text, type = "success") => {
     setSuccessMessage({ text, type });
@@ -152,19 +154,114 @@ export function UserDashboard() {
     URL.revokeObjectURL(url);
   };
 
+  const fetchUserData = useCallback(async () => {
+    if (!currentUser) return;
+    setLoading(true);
+
+    try {
+      const [
+        profileResponse,
+        tripsResponse,
+        favoritesResponse,
+        alertsResponse,
+      ] = await Promise.all([
+        fetch("/api/user/me", { headers: getAuthHeaders() }),
+        fetch("/api/user/trips", { headers: getAuthHeaders() }),
+        fetch("/api/user/favorites", { headers: getAuthHeaders() }),
+        fetch("/api/user/alerts", { headers: getAuthHeaders() }),
+      ]);
+
+      if (!profileResponse.ok)
+        throw new Error("Impossible de charger le profil");
+      if (!tripsResponse.ok)
+        throw new Error("Impossible de charger les voyages");
+      if (!favoritesResponse.ok)
+        throw new Error("Impossible de charger les favoris");
+      if (!alertsResponse.ok)
+        throw new Error("Impossible de charger les alertes");
+
+      const profileDataFromApi = await profileResponse.json();
+      const tripsData = await tripsResponse.json();
+      const favoritesData = await favoritesResponse.json();
+      const alertsData = await alertsResponse.json();
+
+      setCurrentUser((prev) => ({
+        ...prev,
+        name: profileDataFromApi.name,
+        email: profileDataFromApi.email,
+      }));
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify({
+          ...currentUser,
+          name: profileDataFromApi.name,
+          email: profileDataFromApi.email,
+        }),
+      );
+
+      setProfileData((prev) => ({
+        ...prev,
+        firstName: profileDataFromApi.name.split(" ")[0] || "",
+        lastName: profileDataFromApi.name.split(" ")[1] || "",
+        email: profileDataFromApi.email,
+      }));
+      setUserTrips(tripsData);
+      setSavedFlights(favoritesData);
+      setPriceAlertsData(
+        alertsData.map((alert) => ({
+          id: alert.id,
+          from: alert.route?.split("-")[0] || "",
+          to: alert.route?.split("-")[1] || "",
+          description: alert.description || alert.route,
+          target: alert.target || `${alert.target} €`,
+          active: alert.active,
+        })),
+      );
+    } catch (error) {
+      console.error(error);
+      showMessage("Impossible de charger les données du dashboard.", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [currentUser, setLoading]);
+
   // Enregistre les modifications du profil
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (!currentUser) return;
 
-    const updatedUser = {
-      ...currentUser,
-      name: `${profileData.firstName} ${profileData.lastName}`.trim(),
-      email: profileData.email,
-    };
+    const updatedName =
+      `${profileData.firstName} ${profileData.lastName}`.trim();
 
-    setCurrentUser(updatedUser);
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-    showMessage("Profil enregistré avec succès.");
+    try {
+      const response = await fetch("/api/user/me", {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          name: updatedName,
+          email: profileData.email,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de mettre à jour le profil");
+      }
+
+      const result = await response.json();
+      const updatedUser = result.user;
+
+      setCurrentUser(updatedUser);
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+      setProfileData((prev) => ({
+        ...prev,
+        firstName: updatedUser.name.split(" ")[0] || "",
+        lastName: updatedUser.name.split(" ")[1] || "",
+        email: updatedUser.email,
+      }));
+      showMessage("Profil enregistré avec succès.");
+    } catch (error) {
+      console.error(error);
+      showMessage("Impossible de sauvegarder le profil.", "error");
+    }
   };
 
   // Ajoute un document voyage
@@ -203,23 +300,60 @@ export function UserDashboard() {
   };
 
   // Crée une nouvelle alerte de prix
-  const handleCreatePriceAlert = () => {
-    const newAlert = {
-      id: `alert-${priceAlertsData.length + 1}`,
-      from: "Paris",
-      to: "New York",
-      description: "Départ flexible le mois prochain",
-      target: "moins de 700 €",
-      active: true,
-    };
-    setPriceAlertsData([...priceAlertsData, newAlert]);
-    showMessage("Alerte de prix créée.");
+  const handleCreatePriceAlert = async () => {
+    const defaultRoute =
+      savedFlights[0]?.from && savedFlights[0]?.to
+        ? `${savedFlights[0].from}-${savedFlights[0].to}`
+        : "CDG-JFK";
+
+    try {
+      const response = await fetch("/api/user/alerts", {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          route: defaultRoute,
+          target: 400,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de créer l'alerte");
+      }
+
+      const { alert } = await response.json();
+      setPriceAlertsData((prev) => [
+        {
+          id: alert.id,
+          from: alert.route?.split("-")[0] || "",
+          to: alert.route?.split("-")[1] || "",
+          description: alert.description || alert.route,
+          target: `${alert.target} €`,
+          active: alert.active,
+        },
+        ...prev,
+      ]);
+      showMessage("Alerte de prix créée.");
+    } catch (error) {
+      console.error(error);
+      showMessage("Impossible de créer l'alerte.", "error");
+    }
   };
 
   // Supprime une alerte de prix
-  const handleRemovePriceAlert = (alertId) => {
-    setPriceAlertsData((prev) => prev.filter((alert) => alert.id !== alertId));
-    showMessage("Alerte de prix supprimée.");
+  const handleRemovePriceAlert = async (alertId) => {
+    try {
+      await fetch(`/api/user/alerts/${alertId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      setPriceAlertsData((prev) =>
+        prev.filter((alert) => alert.id !== alertId),
+      );
+      showMessage("Alerte de prix supprimée.");
+    } catch (error) {
+      console.error(error);
+      showMessage("Impossible de supprimer l'alerte.", "error");
+    }
   };
 
   // Active ou désactive une notification
@@ -283,13 +417,29 @@ export function UserDashboard() {
   };
 
   // Supprime le compte utilisateur et efface les données locales
-  const handleDeleteAccount = () => {
-    localStorage.removeItem("currentUser");
-    localStorage.removeItem("favoriteFlights");
-    setCurrentUser(null);
-    setSavedFlights([]);
-    navigate("/");
-    showMessage("Compte supprimé avec succès.");
+  const handleDeleteAccount = async () => {
+    try {
+      const response = await fetch("/api/user/me", {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de supprimer le compte");
+      }
+
+      localStorage.removeItem("currentUser");
+      localStorage.removeItem("token");
+      setCurrentUser(null);
+      setSavedFlights([]);
+      setUserTrips([]);
+      setPriceAlertsData([]);
+      navigate("/");
+      showMessage("Compte supprimé avec succès.");
+    } catch (error) {
+      console.error(error);
+      showMessage("Impossible de supprimer le compte.", "error");
+    }
   };
 
   // Ajoute une carte bancaire
@@ -315,26 +465,41 @@ export function UserDashboard() {
     showMessage("Crédit de voyage appliqué.");
   };
 
-  // Affiche toutes les réservations
-  const handleViewAllTrips = () => {
-    showMessage("Affichage de toutes les réservations.");
-  };
-
   // Si l’utilisateur n’est pas connecté, retour à l’accueil
   useEffect(() => {
     if (!currentUser) {
       navigate("/");
+      return;
     }
-  }, [currentUser, navigate]);
 
-  // Supprime un vol des favoris
-  const removeFavorite = (flightId) => {
-    const updatedFlights = savedFlights.filter((f) => f.id !== flightId);
-    setSavedFlights(updatedFlights);
-    localStorage.setItem("favoriteFlights", JSON.stringify(updatedFlights));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchUserData();
+  }, [currentUser, navigate, fetchUserData]);
+
+  // Supprime un vol des favoris et met à jour la base
+  const removeFavorite = async (flightId) => {
+    try {
+      const response = await fetch(`/api/user/favorites/${flightId}`, {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error("Impossible de supprimer le favori");
+      }
+
+      setSavedFlights((prev) => prev.filter((f) => f.id !== flightId));
+      showMessage("Vol supprimé des favoris.");
+    } catch (error) {
+      console.error(error);
+      showMessage("Impossible de supprimer le favori.", "error");
+    }
   };
 
-  // Liste des onglets du dashboard
+  const handleViewAllTrips = () => {
+    showMessage("Affichage de toutes les réservations.");
+  };
+
   const tabs = [
     { id: "trips", label: "Mes voyages", icon: Plane },
     { id: "profile", label: "Profil & Documents", icon: User },
@@ -348,7 +513,6 @@ export function UserDashboard() {
   if (!currentUser) {
     return null;
   }
-
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -410,65 +574,84 @@ export function UserDashboard() {
                     </button>
                   </div>
                   <div className="space-y-4">
-                    <div className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <Plane className="w-5 h-5 text-blue-600" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              Paris → New York
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              Code: ABC123456
-                            </p>
-                          </div>
-                        </div>
-                        <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
-                          Confirmé
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4 mb-3">
-                        <div>
-                          <p className="text-xs text-gray-500">Départ</p>
-                          <p className="text-sm font-medium">
-                            15 juin 2026, 14:30
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-gray-500">Retour</p>
-                          <p className="text-sm font-medium">
-                            22 juin 2026, 18:45
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() =>
-                            handleEditReservation("Paris → New York")
-                          }
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
+                    {userTrips.length > 0 ? (
+                      userTrips.map((trip) => (
+                        <div
+                          key={trip.id}
+                          className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
                         >
-                          Modifier
-                        </button>
-                        <button
-                          onClick={() =>
-                            handleViewReservationDetails("Paris → New York")
-                          }
-                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
-                        >
-                          Voir détails
-                        </button>
-                      </div>
-                    </div>
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <Plane className="w-5 h-5 text-blue-600" />
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {trip.from} → {trip.to}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {trip.airline || "Compagnie inconnue"}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                              {trip.status}
+                            </span>
+                          </div>
 
-                    <div className="text-center py-8 text-gray-500">
-                      <Plane className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>Aucune autre réservation à venir</p>
-                    </div>
+                          <div className="grid grid-cols-2 gap-4 mb-3">
+                            <div>
+                              <p className="text-xs text-gray-500">Départ</p>
+                              <p className="text-sm font-medium">
+                                {trip.departureDate
+                                  ? new Date(
+                                      trip.departureDate,
+                                    ).toLocaleDateString("fr-FR")
+                                  : "N/A"}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-500">Retour</p>
+                              <p className="text-sm font-medium">
+                                {trip.returnDate
+                                  ? new Date(
+                                      trip.returnDate,
+                                    ).toLocaleDateString("fr-FR")
+                                  : "Aller simple"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() =>
+                                handleEditReservation(
+                                  `${trip.from} → ${trip.to}`,
+                                )
+                              }
+                              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm font-medium transition-colors"
+                            >
+                              Modifier
+                            </button>
+                            <button
+                              onClick={() =>
+                                handleViewReservationDetails(
+                                  `${trip.from} → ${trip.to}`,
+                                )
+                              }
+                              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
+                            >
+                              Voir détails
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Plane className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Aucune réservation à venir pour le moment.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -477,36 +660,45 @@ export function UserDashboard() {
                     Historique des voyages
                   </h2>
                   <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Calendar className="w-5 h-5 text-gray-400" />
-                          <div>
-                            <p className="text-sm font-medium">
-                              Paris → Londres
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(2026, 0, i * 10).toLocaleDateString(
-                                "fr-FR",
-                              )}
-                            </p>
+                    {userTrips.length > 0 ? (
+                      userTrips.map((trip) => (
+                        <div
+                          key={trip.id}
+                          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Calendar className="w-5 h-5 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium">
+                                {trip.from} → {trip.to}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {trip.departureDate
+                                  ? new Date(
+                                      trip.departureDate,
+                                    ).toLocaleDateString("fr-FR")
+                                  : "Date inconnue"}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleDownloadInvoice(trip.id)}
+                              className="p-2 hover:bg-gray-100 rounded-lg"
+                              title="Télécharger la facture"
+                            >
+                              <Download className="w-4 h-4 text-gray-600" />
+                            </button>
+                            <ChevronRight className="w-5 h-5 text-gray-400" />
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => handleDownloadInvoice(i + 1000)}
-                            className="p-2 hover:bg-gray-100 rounded-lg"
-                            title="Télécharger la facture"
-                          >
-                            <Download className="w-4 h-4 text-gray-600" />
-                          </button>
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
-                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Aucun historique de voyages enregistré.</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
 
@@ -515,30 +707,39 @@ export function UserDashboard() {
                     Factures et reçus
                   </h2>
                   <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
-                      >
-                        <div className="flex items-center gap-3">
-                          <FileText className="w-5 h-5 text-blue-600" />
-                          <div>
-                            <p className="text-sm font-medium">
-                              Facture #{1000 + i}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {new Date(2026, 0, i * 10).toLocaleDateString(
-                                "fr-FR",
-                              )}
-                            </p>
+                    {userTrips.length > 0 ? (
+                      userTrips.slice(0, 3).map((trip, index) => (
+                        <div
+                          key={trip.id}
+                          className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50"
+                        >
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <p className="text-sm font-medium">
+                                Facture #{1000 + index}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {trip.departureDate
+                                  ? new Date(
+                                      trip.departureDate,
+                                    ).toLocaleDateString("fr-FR")
+                                  : "Date inconnue"}
+                              </p>
+                            </div>
                           </div>
+                          <button className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                            <Download className="w-4 h-4" />
+                            Télécharger
+                          </button>
                         </div>
-                        <button className="flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                          <Download className="w-4 h-4" />
-                          Télécharger
-                        </button>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Aucune facture disponible pour le moment.</p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -825,13 +1026,15 @@ export function UserDashboard() {
                                   {flight.from} → {flight.to}
                                 </p>
                                 <p className="text-sm text-gray-500">
-                                  {flight.airline}
+                                  {flight.airline || "Compagnie inconnue"}
                                 </p>
                               </div>
                             </div>
                             <div className="text-right">
                               <p className="text-xl font-bold text-blue-600">
-                                {flight.price} €
+                                {flight.price
+                                  ? `${flight.price} €`
+                                  : "Prix indisponible"}
                               </p>
                               <button
                                 onClick={() => removeFavorite(flight.id)}
@@ -846,21 +1049,23 @@ export function UserDashboard() {
                             <div>
                               <p className="text-xs text-gray-500">Départ</p>
                               <p className="text-sm font-medium">
-                                {new Date(
-                                  flight.departureDate,
-                                ).toLocaleDateString("fr-FR")}
+                                {flight.departureDate
+                                  ? new Date(
+                                      flight.departureDate,
+                                    ).toLocaleDateString("fr-FR")
+                                  : "Date non définie"}
                               </p>
                             </div>
-                            {flight.returnDate && (
-                              <div>
-                                <p className="text-xs text-gray-500">Retour</p>
-                                <p className="text-sm font-medium">
-                                  {new Date(
-                                    flight.returnDate,
-                                  ).toLocaleDateString("fr-FR")}
-                                </p>
-                              </div>
-                            )}
+                            <div>
+                              <p className="text-xs text-gray-500">Retour</p>
+                              <p className="text-sm font-medium">
+                                {flight.returnDate
+                                  ? new Date(
+                                      flight.returnDate,
+                                    ).toLocaleDateString("fr-FR")
+                                  : "Aller simple"}
+                              </p>
+                            </div>
                           </div>
 
                           <button
@@ -875,10 +1080,9 @@ export function UserDashboard() {
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Heart className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                      <p>Aucun vol sauvegardé</p>
+                      <p>Aucun vol sauvegardé.</p>
                       <p className="text-sm mt-1">
-                        Utilisez le bouton favoris sur les vols pour les
-                        retrouver ici
+                        Les vols sauvegardés s'affichent ici automatiquement.
                       </p>
                     </div>
                   )}
@@ -898,53 +1102,55 @@ export function UserDashboard() {
                   </div>
 
                   <div className="space-y-3">
-                    {priceAlertsData.map((alert) => (
-                      <div
-                        key={alert.id}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <Bell className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <p className="font-medium">
-                                {alert.from} → {alert.to}
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {alert.description}
-                              </p>
-                              <p className="text-xs text-gray-500 mt-1">
-                                Prix cible: {alert.target}
-                              </p>
+                    {priceAlertsData.length > 0 ? (
+                      priceAlertsData.map((alert) => (
+                        <div
+                          key={alert.id}
+                          className="border border-gray-200 rounded-lg p-4"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <Bell className="w-5 h-5 text-blue-600" />
+                              <div>
+                                <p className="font-medium">
+                                  {alert.from} → {alert.to}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {alert.description}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Prix cible : {alert.target}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2 py-1 text-xs font-medium rounded ${alert.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
+                              >
+                                {alert.active ? "Active" : "Inactive"}
+                              </span>
+                              <button
+                                onClick={() => handleRemovePriceAlert(alert.id)}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`px-2 py-1 text-xs font-medium rounded ${alert.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"}`}
-                            >
-                              {alert.active ? "Active" : "Inactive"}
-                            </span>
-                            <button
-                              onClick={() => handleRemovePriceAlert(alert.id)}
-                              className="text-gray-400 hover:text-gray-600"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                        <p className="text-gray-600 mb-2">
+                          Créez des alertes de prix
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Recevez une notification quand le prix baisse sur vos
+                          itinéraires préférés.
+                        </p>
                       </div>
-                    ))}
-
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                      <AlertCircle className="w-12 h-12 mx-auto mb-3 text-gray-400" />
-                      <p className="text-gray-600 mb-2">
-                        Créez des alertes de prix
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Recevez une notification quand le prix baisse sur vos
-                        itinéraires préférés
-                      </p>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>

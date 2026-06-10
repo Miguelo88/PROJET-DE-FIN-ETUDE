@@ -119,36 +119,36 @@ router.get("/:id", async (req, res) => {
     // ✅ Parse l'ID pour extraire les informations
     // Ton frontend envoie: /flight/CDG-DLA-2026-05-30-1234?origin=CDG&destination=DLA&date=2026-05-30
     // Tu peux encoder l'ID différemment selon comment tu le génères dans FlightCard
-    
+
     // Exemple: si l'ID est de la forme "CDG-DLA-2026-05-30-0" (index dans le tableau)
     // Tu peux le parser ainsi :
     const parts = flightId.split("-");
-    
+
     // Si tu stockes origin, destination, date et index dans l'ID
     if (parts.length >= 4) {
       const origin = parts[0];
       const destination = parts[1];
       const date = parts.slice(2, 4).join("-"); // reconstitue la date
-      
+
       // Appel réel à AviationStack
       const response = await axios.get(AVIATION_STACK_API_URL, {
         params: {
           access_key: AVIATION_STACK_API_KEY,
           dep_iata: origin,
           arr_iata: destination,
-          flight_date: date
-        }
+          flight_date: date,
+        },
       });
 
       const flights = response.data.results || [];
-      
+
       // Trouve le vol à l'index correspondant (dernier élément de parts)
       const index = parseInt(parts[parts.length - 1]);
-      
+
       if (!flights[index]) {
         return res.status(404).json({
           error: "Vol non trouvé",
-          message: `Aucun vol à l'index ${index} pour cette recherche`
+          message: `Aucun vol à l'index ${index} pour cette recherche`,
         });
       }
 
@@ -158,24 +158,41 @@ router.get("/:id", async (req, res) => {
       const flight = {
         id: flightId && flightId !== 0 ? flightId : `flight-${Date.now()}`, // fallback ID
         airline: aviationFlight.airline?.name || "Compagnie inconnue",
-        flightNumber: aviationFlight.flight?.number || aviationFlight.flight?.iata || "N/A",
-        origin: aviationFlight.departure?.iata ||"XYZ" || origin,
+        flightNumber:
+          aviationFlight.flight?.number || aviationFlight.flight?.iata || "N/A",
+        origin: aviationFlight.departure?.iata || "XYZ" || origin,
         originCity: aviationFlight.departure?.city || "Ville inconnue",
-        originName: aviationFlight.departure?.airport || aviationFlight.departure?.iata || origin,
-        destination: aviationFlight.arrival?.iata ||"XYZ" || destination,
+        originName:
+          aviationFlight.departure?.airport ||
+          aviationFlight.departure?.iata ||
+          origin,
+        destination: aviationFlight.arrival?.iata || "XYZ" || destination,
         destinationCity: aviationFlight.arrival?.city || "Ville inconnue",
-        destinationName: aviationFlight.arrival?.airport || aviationFlight.arrival?.iata || destination,
-        departureTime: aviationFlight.departure?.scheduled?.split("T")[1]?.substring(0, 5) || "00:00",
-        arrivalTime: aviationFlight.arrival?.scheduled?.split("T")[1]?.substring(0, 5) || "00:00",
+        destinationName:
+          aviationFlight.arrival?.airport ||
+          aviationFlight.arrival?.iata ||
+          destination,
+        departureTime:
+          aviationFlight.departure?.scheduled?.split("T")[1]?.substring(0, 5) ||
+          "00:00",
+        arrivalTime:
+          aviationFlight.arrival?.scheduled?.split("T")[1]?.substring(0, 5) ||
+          "00:00",
         duration: aviationFlight.flight?.duration?.text || "Calculer",
-        stops: 0, // AviationStack ne renvoie pas directement le nombre d'escales
-        price: 450, // Tu dois avoir ce champ dans ton frontend ou le récupérer ailleurs
+        stops, // AviationStack ne renvoie pas directement le nombre d'escales
+        price, // Tu dois avoir ce champ dans ton frontend ou le récupérer ailleurs
         aircraft: aviationFlight.aircraft?.model || "Appareil inconnu",
         cabinClass: "Économique", // à définir selon ton système
         availableSeats: 50, // à définir selon ton système
-        date: date || aviationFlight.flight_date || new Date().toISOString().split("T")[0],
-        flight_date: date || aviationFlight.flight_date || new Date().toISOString().split("T")[0],
-        flight_status: aviationFlight.flight_status || "scheduled"
+        date:
+          date ||
+          aviationFlight.flight_date ||
+          new Date().toISOString().split("T")[0],
+        flight_date:
+          date ||
+          aviationFlight.flight_date ||
+          new Date().toISOString().split("T")[0],
+        flight_status: aviationFlight.flight_status || "scheduled",
       };
 
       return res.json(flight);
@@ -184,126 +201,34 @@ router.get("/:id", async (req, res) => {
     // ❌ Si l'ID n'est pas dans le bon format
     return res.status(400).json({
       error: "ID de vol invalide",
-      message: "Format d'ID attendu: ORIGIN-DESTINATION-DATE-INDEX (ex: CDG-DLA-2026-05-30-0)"
+      message:
+        "Format d'ID attendu: ORIGIN-DESTINATION-DATE-INDEX (ex: CDG-DLA-2026-05-30-0)",
     });
-
   } catch (error) {
-    console.error("Erreur récupération du vol:", error.response?.data || error.message);
-    
+    console.error(
+      "Erreur récupération du vol:",
+      error.response?.data || error.message,
+    );
+
     if (error.response?.status === 401) {
       return res.status(500).json({
         error: "Erreur API AviationStack",
-        message: "Clé API invalide ou manquante"
+        message: "Clé API invalide ou manquante",
       });
     }
-    
+
     if (error.response?.status === 404) {
       return res.status(404).json({
         error: "Vol non trouvé",
-        message: "Aucun vol trouvé pour ces critères"
+        message: "Aucun vol trouvé pour ces critères",
       });
     }
 
     return res.status(500).json({
       error: "Erreur serveur",
-      message: error.message
+      message: error.message,
     });
   }
 });
 
-// router.get("/:id", async (req, res) => {
-//   try {
-//     const flightId = req.params.id;
-    
-//     // Note : Comme vous utilisez l'API de simulation/démo AviationStack dans /search, 
-//     // vous pouvez renvoyer une réponse simulée ou stocker temporairement vos vols dans une variable globale.
-    
-//     // Exemple de réponse de simulation pour que votre frontend ne plante plus :
-//     return res.json({
-//       success: true,
-//       flight: {
-//         id: flightId,
-//         flight_date: "2026-05-30",
-//         flight: { number: "1234" },
-//         departure: { airport: "Paris Charles de Gaulle", iata: "CDG" },
-//         arrival: { airport: "Douala International Airport", iata: "DLA" },
-//         flight_status: "scheduled"
-//       }
-//     });
-//   } catch (error) {
-//     return res.status(500).json({ message: "Erreur récupération du vol", error: error.message });
-//   }
-// });
-
-
 module.exports = router;
-
-// const express = require("express");
-// const axios = require("axios");
-// const router = express.Router();
-
-// router.get("/search", async (req, res) => {
-//   try {
-//     const {
-//       origin,
-//       destination,
-//       departureDate,
-//       returnDate,
-//       passengers,
-//       tripType,
-//     } = req.query;
-
-//     if (!origin || !destination || !departureDate) {
-//       return res.status(400).json({ message: "Paramètres manquants" });
-//     }
-
-//     const apiKey = process.env.AVIATIONSTACK_API_KEY;
-//     if (!apiKey) {
-//       return res.status(500).json({ message: "Clé AviationStack manquante" });
-//     }
-
-//     const departureParams = {
-//       access_key: apiKey,
-//       dep_iata: origin,
-//       arr_iata: destination,
-//       flight_date: departureDate,
-//       limit: 50,
-//     };
-
-//     const departureResponse = await axios.get(
-//       "https://api.aviationstack.com/v1/flights",
-//       { params: departureParams }
-//     );
-
-//     const departureFlights = departureResponse.data.data || [];
-
-//     let returnFlights = [];
-//     if (tripType === "round-trip" && returnDate) {
-//       const returnParams = {
-//         access_key: apiKey,
-//         dep_iata: destination,
-//         arr_iata: origin,
-//         flight_date: returnDate,
-//         limit: 50,
-//       };
-
-//       const returnResponse = await axios.get(
-//         "https://api.aviationstack.com/v1/flights",
-//         { params: returnParams }
-//       );
-
-//       returnFlights = returnResponse.data.data || [];
-//     }
-
-//     return res.json({
-//       departureFlights,
-//       returnFlights,
-//       passengers: Number(passengers || 1),
-//     });
-//   } catch (error) {
-//     console.error("Erreur recherche vols :", error.response?.data || error.message);
-//     return res.status(500).json({ message: "Erreur lors de la recherche des vols" });
-//   }
-// });
-
-// module.exports = router;
