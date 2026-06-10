@@ -37,7 +37,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../UI/alertDialog";
+} from "../UI/AlertDialog";
 
 export function UserManagement() {
   const [users, setUsers] = useState([]);

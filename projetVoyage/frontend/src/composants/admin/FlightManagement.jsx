@@ -17,9 +17,9 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../ui/Table";
-import { Badge } from "../ui/Badge";
-import { Button } from "../ui/Button";
+} from "../UI/Table";
+import { Badge } from "../UI/Badge";
+import { Button } from "../UI/Button";
 import {
   Dialog,
   DialogContent,
