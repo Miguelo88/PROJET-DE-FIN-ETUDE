@@ -20,13 +20,13 @@ export function FlightCard({ flight }) {
   // Affiche dans la console le vol reçu (utile pour le débogage)
   console.log("FLIGHT RECU PAR FlightCard :", flight);
   // c'est pour la gestion des favoris, on peut supprimer ce console.log après les tests
-  // const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
-  // eslint-disable-next-line no-undef
+
   useEffect(() => {
     const favorites = getFavorites();
     const exists = favorites.some((item) => item.id === flight.id);
-    // eslint-disable-next-line react-hooks/immutability
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsFavorite(exists);
   }, [flight.id]);
 
@@ -41,8 +41,7 @@ export function FlightCard({ flight }) {
 
   // État local pour savoir si le vol est marqué comme favori
   // false = pas favori, true = favori
-  const [isFavorite, setIsFavorite] = useState(false);
-
+  
   // Début du rendu du composant
   return (
     // Conteneur principal du card : fond blanc, coins arrondis, ombre qui grossit au survol
@@ -59,11 +58,21 @@ export function FlightCard({ flight }) {
 
         {/* Partie droite : prix et info "par passager" */}
         <div className="text-right">
-          {/* Prix du vol en euros, gros et en bleu */}
-          <p className="text-3xl font-bold text-blue-600">{flight.price}€</p>
-          {/* Petite info sous le prix */}
-          <p className="text-xs text-gray-500">par passager</p>
+          <p className="text-xs text-gray-500">À partir de</p>{" "}
+          {/* Changement ici */}
+          <p className="text-3xl font-bold text-blue-600">
+            {flight.price ? `${flight.price} ${flight.currency}` : "Non dispo."}
+          </p>
         </div>
+
+        {/* <div className="text-right">
+        {/* prix en fonction de la devise et info "par passager" */}
+        {/* <p className="text-3xl font-bold text-blue-600">
+            {flight.price ?? "N/A"} {flight.currency ?? "EUR"}
+          </p>
+          {/* Petite info sous le prix */}
+        {/* <p className="text-xs text-gray-500">par passager</p>
+        </div> */}
       </div>
 
       {/* Section centrale : horaires de départ et d'arrivée + durée/escales */}
@@ -127,16 +136,13 @@ export function FlightCard({ flight }) {
         {/* Bouton pour sélectionner ce vol et aller vers la page de détail */}
         <button
           onClick={() => {
-            // 💡 On récupère les valeurs directement depuis l'objet 'flight'
-            const complexId = `${flight.origin}-${flight.destination}-${flight.date}-${flight.id}`;
-            navigate(`/flight/${complexId}`);
+            navigate(`/flight/${flight.id}${flight.date ? `?date=${flight.date}` : ""}`);
           }}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
           Sélectionner
         </button>
-
-              </div>
+      </div>
 
       {/* Bouton Favori (NOUVELLE FONCTIONNALITÉ) */}
 
@@ -151,34 +157,6 @@ export function FlightCard({ flight }) {
           }`}
         />
       </button>
-      {/* <button
-        // Au clic, on inverse isFavorite (true ↔ false)
-        // e.stopPropagation() empêche le clic de se propager au parent
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsFavorite(!isFavorite);
-        }}
-        // Position absolue en haut à droite du card
-        className="absolute top-4 right-4 z-10 p-2 hover:bg-gray-100 rounded-full transition-colors"
-        // Texte d'info-bulle quand on passe la souris
-        title="Ajouter aux favoris"
-      >
-        {/* Icône cœur : rouge rempli si favori, sinon gris */}
-      {/* <Heart
-          className={`w-5 h-5 ${ */}
-      {/* //       isFavorite
-      //         ? "fill-red-500 text-red-500" // cœur rouge rempli si favoris
-      //         : "text-gray-400"            // cœur gris sinon
-      //     }`}
-      //   />
-      // </button> */}
-
-      {/* Bloc d'alerte si peu de places disponibles (déjà présent, reformulé) */}
-      {/* {flight.availableSeats < 20 && (
-        <p className="text-xs text-orange-600 mt-2">
-          Plus que {flight.availableSeats} places disponibles
-        </p>
-      )} */}
 
       {/* Remplacer l'ancien bloc {flight.availableSeats < 20 && ...} par ceci : */}
       {/* Si le nombre de places disponibles est inférieur à 20, afficher un message orange */}
@@ -193,5 +171,3 @@ export function FlightCard({ flight }) {
     </div>
   );
 }
-
-

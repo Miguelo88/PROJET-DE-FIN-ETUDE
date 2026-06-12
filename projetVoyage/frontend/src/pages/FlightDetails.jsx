@@ -35,6 +35,14 @@ export function FlightDetails() {
       localStorage.getItem("searchResults") || "[]",
     );
 
+    const exactMatch = searchResults.find((f) => f.id === id);
+
+    if (exactMatch) {
+      setFlight(exactMatch);
+      setLoading(false);
+      return;
+    }
+
     const lastDashIndex = id.lastIndexOf("-");
     const simpleId = lastDashIndex > -1 ? id.substring(lastDashIndex + 1) : id;
 
@@ -73,7 +81,7 @@ export function FlightDetails() {
     toggleFavorite(flight);
     setIsFavorite((prev) => !prev);
   };
-   const handleBookClick = () => {
+  const handleBookClick = () => {
     // Redirige vers la page de réservation avec l'ID du vol et la date
     navigate(`/reservation/${id}?date=${date}`);
   };
@@ -145,7 +153,7 @@ export function FlightDetails() {
             </div>
             <div className="text-right">
               <p className="text-4xl font-bold text-blue-600">
-                {flight.price}€
+                {flight.price ?? "N/A"} {flight.currency ?? "EUR"}
               </p>
               <p className="text-sm text-gray-500">par passager</p>
             </div>
@@ -223,7 +231,9 @@ export function FlightDetails() {
               <Users className="w-5 h-5 text-gray-400 mt-1" />
               <div>
                 <p className="text-xs text-gray-500">Places restantes</p>
-                <p className="font-semibold">{flight.availableSeats || "Non spécifié"}</p>
+                <p className="font-semibold">
+                  {flight.availableSeats || "Non spécifié"}
+                </p>
               </div>
             </div>
           </div>
@@ -239,13 +249,23 @@ export function FlightDetails() {
         {/* ... */}
 
         {/* Bouton de réservation */}
-        <button
-          onClick={handleBookClick}
-          className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-lg"
-        >
-          Réserver ce vol
-        </button>
-
+        {flight.bookingLink ? (
+          <a
+            href={flight.bookingLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full block text-center py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-lg"
+          >
+            Réserver ce vol
+          </a>
+        ) : (
+          <button
+            onClick={handleBookClick}
+            className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-lg"
+          >
+            Réserver ce vol
+          </button>
+        )}
 
         <p className="text-center text-sm text-gray-500 mt-4">
           Prix final à confirmer lors du paiement
@@ -256,7 +276,6 @@ export function FlightDetails() {
     </div>
   );
 }
-
 
 // import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 // import { useState, useEffect } from "react";

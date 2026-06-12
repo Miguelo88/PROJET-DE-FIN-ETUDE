@@ -8,43 +8,81 @@ import { airports } from "../data/mockFlights";
 import { Plane } from "lucide-react";
 
 function mapApiFlightToCard(flightItem, index) {
-  const dep = new Date(flightItem.departure?.scheduled);
-  const arr = new Date(flightItem.arrival?.scheduled);
-
-  const durationMinutes = Math.max(0, Math.round((arr - dep) / 60000));
-  const durationHours = Math.floor(durationMinutes / 60);
-  const durationMin = durationMinutes % 60;
+  const departureTime =
+    flightItem.departureTime ||
+    (flightItem.departure?.scheduled
+      ? new Date(flightItem.departure.scheduled).toTimeString().slice(0, 5)
+      : "00:00");
+  const arrivalTime =
+    flightItem.arrivalTime ||
+    (flightItem.arrival?.scheduled
+      ? new Date(flightItem.arrival.scheduled).toTimeString().slice(0, 5)
+      : "00:00");
+  const duration = flightItem.duration || "N/A";
+  const originLabel =
+    flightItem.originCity ||
+    flightItem.departureAirport ||
+    flightItem.origin ||
+    flightItem.departure?.airport ||
+    "Aéroport de départ";
+  const destinationLabel =
+    flightItem.destinationCity ||
+    flightItem.arrivalAirport ||
+    flightItem.destination ||
+    flightItem.arrival?.airport ||
+    "Aéroport d'arrivée";
+  const priceValue =
+    flightItem.price === null || flightItem.price === undefined
+      ? null
+      : Number(flightItem.price);
+  const stopsValue =
+    typeof flightItem.stops === "number"
+      ? flightItem.stops
+      : Number.isFinite(Number(flightItem.stops))
+        ? Number(flightItem.stops)
+        : flightItem.flight?.codeshared
+          ? 1
+          : 0;
 
   return {
-    // j'ai enleve api- sur la declaration de l'id
-    id: `${index}`,
-    airline: flightItem.airline?.name || "Compagnie inconnue",
+    id: flightItem.id || `${index}`,
+    airline:
+      flightItem.airline?.name || flightItem.airline || "Compagnie inconnue",
     flightNumber:
+      flightItem.flightNumber ||
       flightItem.flight?.iata ||
       `${flightItem.airline?.iata || ""}${flightItem.flight?.number || ""}` ||
       "N/A",
     airlineCode: flightItem.airline?.iata || "XX",
-    price: 199 + Math.floor(Math.random() * 400),
-    stops: flightItem.flight?.codeshared ? 1 : 0,
-    duration: `${durationHours}h ${durationMin}min`,
-    departureTime: isNaN(dep.getTime())
-      ? "00:00"
-      : dep.toTimeString().slice(0, 5),
-    arrivalTime: isNaN(arr.getTime())
-      ? "00:00"
-      : arr.toTimeString().slice(0, 5),
-    origin: `${flightItem.departure?.airport || "Aéroport de départ"} (${flightItem.departure?.iata || ""})`,
-    destination: `${flightItem.arrival?.airport || "Aéroport d'arrivée"} (${flightItem.arrival?.iata || ""})`,
-    departureAirport: flightItem.departure?.airport || "Aéroport de départ",
-    arrivalAirport: flightItem.arrival?.airport || "Aéroport d'arrivée",
-    departureTerminal: flightItem.departure?.terminal || "",
-    arrivalTerminal: flightItem.arrival?.terminal || "",
+    price: priceValue,
+    currency: flightItem.currency || "EUR",
+    duration,
+    departureTime,
+    arrivalTime,
+    stops: stopsValue,
+    origin: `${originLabel} (${flightItem.origin || flightItem.departure?.iata || ""})`,
+    destination: `${destinationLabel} (${flightItem.destination || flightItem.arrival?.iata || ""})`,
+    departureAirport:
+      flightItem.originName ||
+      flightItem.departure?.airport ||
+      "Aéroport de départ",
+    arrivalAirport:
+      flightItem.destinationName ||
+      flightItem.arrival?.airport ||
+      "Aéroport d'arrivée",
+    departureTerminal:
+      flightItem.departureTerminal || flightItem.departure?.terminal || "",
+    arrivalTerminal:
+      flightItem.arrivalTerminal || flightItem.arrival?.terminal || "",
     aircraft:
       flightItem.aircraft?.iata ||
       flightItem.aircraft?.icao ||
+      flightItem.aircraft ||
       `Aircraft ${flightItem.aircraft?.icao24 || "non renseigné"}`,
-    cabinClass: "Économique",
-    status: flightItem.flight_status,
+    cabinClass: flightItem.cabinClass || "Économique",
+    status: flightItem.flight_status || flightItem.status,
+    bookingLink: flightItem.bookingLink || null,
+    date: flightItem.date || flightItem.flight_date || null,
   };
 }
 
@@ -103,8 +141,12 @@ export function Results() {
 
         // ✅ AJOUTE CETTE LIGNE ICI :
         localStorage.setItem("searchResults", JSON.stringify(mapped));
-        console.log("✅ Vols enregistrés dans localStorage :", mapped.length, "vols");
-        
+        console.log(
+          "✅ Vols enregistrés dans localStorage :",
+          mapped.length,
+          "vols",
+        );
+
         setFlights(mapped);
 
         const max = Math.max(0, ...mapped.map((f) => f.price));
