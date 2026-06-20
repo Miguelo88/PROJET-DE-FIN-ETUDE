@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : 127.0.0.1:3306
--- Généré le :  ven. 29 mai 2026 à 19:17
+-- Généré le :  mar. 16 juin 2026 à 23:45
 -- Version du serveur :  5.7.23
 -- Version de PHP :  7.2.10
 
@@ -42,15 +42,6 @@ CREATE TABLE IF NOT EXISTS `alerte` (
   KEY `fk_user` (`user_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---
--- Déchargement des données de la table `alerte`
---
-
-INSERT INTO `alerte` (`alerte_id`, `prixCible`, `route`, `active`, `dateCreation`, `vol_id`, `user_id`) VALUES
-(1, '400.00', 'CDG-JFK', 1, '2026-05-05', 101, 1),
-(2, '350.00', 'CDG-JFK', 1, '2026-05-05', 101, 1),
-(3, '100.00', 'FRA-CDG', 1, '2026-05-05', 102, 1);
-
 -- --------------------------------------------------------
 
 --
@@ -67,13 +58,23 @@ CREATE TABLE IF NOT EXISTS `compagnie` (
   PRIMARY KEY (`compagnie_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+-- --------------------------------------------------------
+
 --
--- Déchargement des données de la table `compagnie`
+-- Structure de la table `favorites`
 --
 
-INSERT INTO `compagnie` (`compagnie_id`, `code_IATA`, `nom_compagnie`, `pays`, `logo`) VALUES
-(1, 'AF', 'Air France', 'France', 'logo_af.png'),
-(2, 'LH', 'Lufthansa', 'Allemagne', 'logo_lh.png');
+DROP TABLE IF EXISTS `favorites`;
+CREATE TABLE IF NOT EXISTS `favorites` (
+  `favorite_id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `vol_id` int(11) NOT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`favorite_id`),
+  UNIQUE KEY `uniq_user_vol` (`user_id`,`vol_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_vol_id` (`vol_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
 
@@ -97,14 +98,6 @@ CREATE TABLE IF NOT EXISTS `recherche` (
   KEY `vol_id` (`vol_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---
--- Déchargement des données de la table `recherche`
---
-
-INSERT INTO `recherche` (`recherche_id`, `villeDepart`, `villeArrivee`, `dateAller`, `dateRetour`, `nbPassagers`, `classe`, `user_id`, `vol_id`) VALUES
-(1, 'Paris', 'New York', '2023-12-01', NULL, 1, 'Économique', 1, 101),
-(2, 'Francfort', 'Paris', '2023-12-01', NULL, 2, 'Business', 2, 102);
-
 -- --------------------------------------------------------
 
 --
@@ -123,14 +116,6 @@ CREATE TABLE IF NOT EXISTS `tarif` (
   KEY `vol_id` (`vol_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---
--- Déchargement des données de la table `tarif`
---
-
-INSERT INTO `tarif` (`tarif_id`, `prix`, `devise`, `taxesIncluses`, `bagagesInclus`, `vol_id`) VALUES
-(1, '450.00', 'EUR', 1, 1, 101),
-(2, '120.50', 'EUR', 1, 0, 102);
-
 -- --------------------------------------------------------
 
 --
@@ -145,23 +130,28 @@ CREATE TABLE IF NOT EXISTS `users` (
   `password` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `role` varchar(10) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'user',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `lastname` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `birthDate` date DEFAULT NULL,
+  `phone` int(20) DEFAULT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `email` (`email`)
-) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=23 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Déchargement des données de la table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`) VALUES
-(11, 'Jean miguel', 'jean.miguel@example.com', '$2b$10$BzYOP43alO8x6gBQqoPuUu58LWaSlRNUiv8cc7xazBBmbJlP3Jcmm', 'user', '2026-05-20 00:01:19'),
-(12, 'Miguel Kamdem', 'miguelkamdem92@gmail.com', '$2b$10$9Sn25BmIMepWl/3gDfYEmONMybRgSff4f4eHp27u98EyETZVTgA5W', 'admin', '2026-05-20 00:02:13'),
-(13, 'test2', 'test01@gmail.com', '$2b$10$BL1s3zg3Gvi1Hbl9pC1LjOXQRiwTZdz8wqOGOxdFiqxtHIlUJt4Iq', 'user', '2026-05-20 01:19:21'),
-(14, 'mariane fernanda', 'marianne09@gmail.com', '$2b$10$FfRU0H0k.YXcvGSjnDHb0OefsxlsVICOhcYAOvSv/GO2OSFeTK3Wu', 'user', '2026-05-21 21:48:56'),
-(15, 'MBERE TEMWA JOSUE', 'josuemberetemwa@gmail.com', 'OAUTH_GOOGLE', 'user', '2026-05-24 00:06:03'),
-(16, 'test1', 'test1@gmail.com', '$2b$10$NIfxJkpo4/AHRwcCdkdp3eLraGDYzGO04X24SAxz7Cwzaf6HAl/Ju', 'user', '2026-05-24 23:11:16'),
-(17, 'test', 'test@gmail.com', '$2b$10$dDUnen/7gW79wujWduMRQefIoawiqQu5cgeWmOj0mUesMCazeYhHW', 'user', '2026-05-24 23:28:58'),
-(18, 'test', 'test0@gmail.com', '$2b$10$uF3GSkFvJ0h2Trqjw0USEOhb5lNggo4Hs7Q8i8NcjCrW3UeUyeWVm', 'user', '2026-05-24 23:30:11');
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `role`, `created_at`, `lastname`, `birthDate`, `phone`) VALUES
+(11, 'Jean miguel', 'jean.miguel@example.com', '$2b$10$BzYOP43alO8x6gBQqoPuUu58LWaSlRNUiv8cc7xazBBmbJlP3Jcmm', 'user', '2026-05-20 00:01:19', NULL, NULL, NULL),
+(12, 'Miguel Kamdem', 'miguelkamdem92@gmail.com', '$2b$10$9Sn25BmIMepWl/3gDfYEmONMybRgSff4f4eHp27u98EyETZVTgA5W', 'admin', '2026-05-20 00:02:13', NULL, NULL, NULL),
+(13, 'test2', 'test01@gmail.com', '$2b$10$BL1s3zg3Gvi1Hbl9pC1LjOXQRiwTZdz8wqOGOxdFiqxtHIlUJt4Iq', 'user', '2026-05-20 01:19:21', NULL, NULL, NULL),
+(14, 'mariane fernanda', 'marianne09@gmail.com', '$2b$10$FfRU0H0k.YXcvGSjnDHb0OefsxlsVICOhcYAOvSv/GO2OSFeTK3Wu', 'user', '2026-05-21 21:48:56', NULL, NULL, NULL),
+(15, 'MBERE TEMWA JOSUE', 'josuemberetemwa@gmail.com', 'OAUTH_GOOGLE', 'user', '2026-05-24 00:06:03', NULL, NULL, NULL),
+(17, 'test', 'test@gmail.com', '$2b$10$dDUnen/7gW79wujWduMRQefIoawiqQu5cgeWmOj0mUesMCazeYhHW', 'user', '2026-05-24 23:28:58', NULL, NULL, NULL),
+(19, 'pitou', 'pitou@gmail.com', '$2b$10$q6DvmWevK9mB61nKr3tUm.hiTTfQ6M8oI4tiGyUiyl1mAk2GtTj6a', 'user', '2026-05-31 00:19:30', NULL, NULL, NULL),
+(20, 'qwerty', 'qwerty@gmail.com', '$2b$10$6Emwf5QRLFN1.W6BB52ofeZOmutPNt9KL9BpukDa.KpcolJzwQN/y', 'user', '2026-05-31 00:33:25', NULL, NULL, NULL),
+(21, '1er juin', 'juin@gmail.com', '$2b$10$VPbd/TJIbTuP8cswC1N/meitx8e0s7VFrUQ0DfOwwueXTMzW2Gf1e', 'admin', '2026-06-02 01:15:25', NULL, NULL, NULL),
+(22, 'mai', 'mai@gmail.com', '$2b$10$uNMjwdQIH9VXb40gJS.THe5NrjEvFzFpMlei3v.6Q.OCEKOwwmbfq', 'user', '2026-06-16 23:24:13', NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -182,14 +172,6 @@ CREATE TABLE IF NOT EXISTS `vol` (
   PRIMARY KEY (`vol_id`),
   KEY `compagnie_id` (`compagnie_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
---
--- Déchargement des données de la table `vol`
---
-
-INSERT INTO `vol` (`vol_id`, `compagnie_id`, `depart`, `arrivee`, `heureDepart`, `heureArrivee`, `nbEscales`, `source`) VALUES
-(101, 1, 'CDG', 'JFK', '2023-12-01 10:00:00', '2023-12-01 13:00:00', 0, 'Site Officiel'),
-(102, 2, 'FRA', 'CDG', '2023-12-01 08:00:00', '2023-12-01 09:30:00', 0, 'Skyscanner');
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

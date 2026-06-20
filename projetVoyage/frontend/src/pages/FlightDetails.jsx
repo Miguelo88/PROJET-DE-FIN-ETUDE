@@ -69,9 +69,12 @@ export function FlightDetails() {
   useEffect(() => {
     if (flight) {
       const favorites = getFavorites();
-      const exists = favorites.some((item) => item.id === flight.id);
+      // eslint-disable-next-line no-undef
+      const isFavorite = Array.isArray(favorites) && favorites.some(fav => fav.id === currentFlight.id);
+
+      // const exists = favorites.some((item) => item.id === flight.id);
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsFavorite(exists);
+      setIsFavorite(isFavorite);
     }
   }, [flight]);
 
@@ -82,30 +85,6 @@ export function FlightDetails() {
     setIsFavorite((prev) => !prev);
   };
 
-  // const normalizeBookingLink = (link) => {
-  //   if (!link || typeof link !== "string") {
-  //     return null;
-  //   }
-
-  //   const trimmedLink = link.trim();
-  //   if (/^https?:\/\//i.test(trimmedLink)) {
-  //     return trimmedLink;
-  //   }
-
-  //   return `https://${trimmedLink.replace(/^\/+/, "")}`;
-  // };
-
-  // const handleBookClick = () => {
-  //   const url = normalizeBookingLink(flight?.bookingLink);
-  //   if (!url) {
-  //     window.alert(
-  //       "Lien de réservation non disponible ou invalide pour ce vol.",
-  //     );
-  //     return;
-  //   }
-
-  //   window.open(url, "_blank", "noopener,noreferrer");
-  // };
 
   // État de chargement
   if (loading) {

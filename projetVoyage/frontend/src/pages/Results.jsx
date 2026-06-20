@@ -6,6 +6,8 @@ import { Header } from "../composants/shared/Header";
 import { Footer } from "../composants/shared/Footer";
 import { airports } from "../data/mockFlights";
 import { Plane } from "lucide-react";
+import { getFavorites, toggleFavorite } from "../utils/favoritesStorage"; // Adaptez le chemin relatif
+
 
 function mapApiFlightToCard(flightItem, index) {
   const departureTime =
@@ -106,6 +108,44 @@ export function Results() {
   const [stops, setStops] = useState("all");
   const [selectedAirlines, setSelectedAirlines] = useState([]);
   const [sortBy, setSortBy] = useState("price-asc");
+
+
+  // Stocke uniquement les chaînes d'IDs favoris (ex: ["JFK-BCN-2026-06-18-0"])
+  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser")));
+
+  // Charger les favoris de l'utilisateur connecté dès l'affichage des résultats
+  useEffect(() => {
+    const loadUserFavorites = async () => {
+      if (!currentUser) return; // Si pas connecté, on ignore la BDD
+      try {
+        const favs = await getFavorites();
+        // Extrait uniquement les IDs sous forme de tableau de chaînes de caractères
+        const ids = (favs || []).map(f => f.id || f);
+        setFavoriteIds(ids);
+      } catch (error) {
+        console.error("Erreur lors de la récupération des favoris dans Result.jsx:", error);
+      }
+    };
+
+    loadUserFavorites();
+  }, [currentUser]);
+
+  // Fonction déclenchée lors du clic sur l'icône favori d'un vol
+  const handleToggleFavorite = async (flight) => {
+    try {
+      // 1. Appel asynchrone de la fonction hybride (BDD ou LocalStorage)
+      const updatedFavorites = await toggleFavorite(flight);
+      
+      // 2. Extrait les nouveaux IDs pour mettre à jour l'affichage
+      const newIds = (updatedFavorites || []).map(f => f.id || f);
+      setFavoriteIds(newIds);
+      
+    } catch (error) {
+      console.error("Erreur lors du switch favori dans Result.jsx:", error);
+    }
+  };
+  
 
   useEffect(() => {
     if (!origin || !destination || !date) return;
@@ -296,10 +336,25 @@ export function Results() {
                 </p>
               </div>
             ) : (
-              filteredFlights.map((flight) => (
-                <FlightCard key={flight.id} flight={flight} />
-              ))
+              // filteredFlights.map((flight) => (
+              //   <FlightCard key={flight.id} flight={flight} />
+              // )
+              filteredFlights.map((flight) => {
+                // 🔍 On vérifie si ce vol est actuellement dans les favoris
+                const isCurrentFlightFavorite = favoriteIds.includes(flight.id);
+
+                return (
+                  <FlightCard 
+                    key={flight.id} 
+                    flight={flight} 
+                    // ➕ On transmet les nouvelles propriétés au composant enfant
+                    isFavorite={isCurrentFlightFavorite}
+                    onToggleFavorite={() => handleToggleFavorite(flight)}
+                  />
+                );
+              })
             )}
+            
           </div>
         </div>
       </div>
@@ -308,4 +363,3 @@ export function Results() {
     </div>
   );
 }
-

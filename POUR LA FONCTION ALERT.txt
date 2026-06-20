@@ -1,0 +1,40 @@
+Dans un site de recherche de vols comme le vôtre, le système d'alertes de prix (Price Alerts) fonctionne comme un robot surveillant. Son but est d'éviter que l'utilisateur n'ait à refaire la même recherche tous les jours [travel].
+Voici les étapes logiques de cette fonctionnalité, que vous pouvez implémenter à la suite de vos favoris :
+## 1. Le déclencheur côté Utilisateur (Le Frontend)
+Sur la page Result.jsx, en plus du bouton cœur pour les favoris, on ajoute généralement un bouton "Créer une alerte de prix" (souvent représenté par une icône de cloche 🔔). [1] 
+
+* L'utilisateur clique dessus.
+* Le frontend envoie au backend les critères précis de sa recherche : Ville de départ, Ville d'arrivée, Date aller, Date retour (optionnelle) et le prix actuel du marché.
+
+## 2. Le stockage en Base de Données (La table alerts)
+Dans votre base de données MySQL, vous créez une table nommée alerts. Chaque fois qu'une cloche est cliquée, une ligne s'ajoute :
+
+* user_id : Pour savoir qui avertir.
+* origin / destination / departure_date : Les critères du vol.
+* price_threshold : Le prix actuel (ex: 450 €). Le robot cherchera si le prix descend en dessous de ce seuil. [2] 
+
+## 3. Le travail de l'ombre (Le Script automatique du Serveur)
+C'est la partie la plus importante. Votre serveur backend utilise un script automatique appelé une Tâche Cron (ou Cron Job via un outil Node.js comme node-cron).
+
+* Toutes les nuits à 2h du matin (quand les serveurs sont moins chargés), ce script se réveille automatiquement.
+* Il lit la table alerts pour voir toutes les recherches actives.
+* Pour chaque ligne, le script appelle l'API de vols (comme votre API AviationStack ou Travelpayouts) avec les critères enregistrés pour obtenir le prix du jour frais.
+
+## 4. La détection et l'envoi de l'alerte
+
+* Le script compare le nouveau prix trouvé avec le prix enregistré (price_threshold).
+* Si le prix a baissé (ex: le vol est passé de 450 € à 390 €) : Le serveur déclenche l'envoi d'un e-mail automatique à l'utilisateur (via des outils comme Nodemailer, SendGrid ou Mailgun) avec un message du style : "Bonne nouvelle ! Le prix pour votre vol Paris ➔ New York a baissé de 60 € ! Réservez vite."
+* Le script met à jour le price_threshold avec le nouveau prix plus bas.
+
+------------------------------
+## 🛠️ Par quoi commencer si vous voulez l'ajouter ?
+Si vous souhaitez coder cette fonctionnalité pour votre projet de fin d'études, vous pouvez procéder par étapes :
+
+   1. Créer une table alerts dans votre base de données.
+   2. Ajouter un onglet "Mes Alertes" dans votre Dashboard (juste à côté de vos favoris) pour lister les recherches surveillées.
+   3. Créer une route POST /api/alerts pour enregistrer les critères de recherche.
+
+Souhaitez-vous que l'on écrive ensemble la requête SQL pour créer la table alerts ou le code pour ajouter le bouton cloche 🔔 dans vos résultats ?
+
+[1] [https://www.kiwi.com](https://www.kiwi.com/be/cheap-flights/travel-hacks/flight-price-alerts/)
+[2] [https://fr.tradingview.com](https://fr.tradingview.com/support/solutions/43000763313/)

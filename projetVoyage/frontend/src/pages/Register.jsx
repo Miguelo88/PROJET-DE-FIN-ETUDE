@@ -4,7 +4,15 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "../composants/shared/Header";
 import { Footer } from "../composants/shared/Footer";
-import { User, Mail, Lock, Calendar, CheckCircle } from "lucide-react";
+import {
+  User,
+  Mail,
+  Lock,
+  Calendar,
+  CheckCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 export function Register() {
   const navigate = useNavigate();
@@ -16,7 +24,8 @@ export function Register() {
   });
   const [errors, setErrors] = useState({});
   const [isSuccess, setIsSuccess] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false); // Pour le champ "Mot de passe"
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false); // Pour le champ "Confirmer le mot de passe"
   // --- Google Login (tu passes le token à ton backend Node.js) ---
   const handleGoogleSuccess = async (credentialResponse) => {
     console.log("Jeton JWT reçu du Frontend :", credentialResponse.credential);
@@ -27,7 +36,6 @@ export function Register() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: credentialResponse.credential }),
       });
-
 
       const data = await response.json();
       console.log("--- INSPECTION COMPLÈTE DE LA RÉPONSE DU SERVEUR ---");
@@ -52,7 +60,7 @@ export function Register() {
           console.log("Utilisateur standard. Redirection...");
           setTimeout(() => navigate("/"), 2000);
         }
-      
+
         // // ✅ Redirection intelligente selon le rôle
         // if (data.user && data.user.role === "admin") {
         //   console.log(
@@ -224,7 +232,7 @@ export function Register() {
                 Créer un compte
               </h1>
               <p className="text-blue-100 text-sm">
-                Rejoignez SkySearch pour réserver vos vols facilement
+                Rejoignez TKSkySearch pour réserver vos vols facilement
               </p>
             </div>
 
@@ -240,46 +248,18 @@ export function Register() {
                   Continuer avec
                 </p>
 
-                <div className="grid grid-cols-3 gap-3">
-                  {/* Google (bouton custom mais avec GoogleLogin en fond) */}
-                  <div className="flex justify-center">
-                    <GoogleLogin
-                      onSuccess={handleGoogleSuccess}
-                      onError={handleGoogleError}
-                      useOneTap={false}
-                      text="signin_with"
-                      shape="pill"
-                      theme="outline"
-                      size="large"
-                      locale="fr"
-                    />
-                  </div>
-
-                  {/* <button
-                    type="button"
-                    onClick={() => handleSocialLogin("facebook")}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-blue-50 transition-colors group"
-                  >
-                    <div className="text-blue-600">
-                      <FacebookIcon />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 hidden sm:inline">
-                      Facebook
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSocialLogin("apple")}
-                    className="flex items-center justify-center gap-2 px-4 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors group"
-                  >
-                    <div className="text-gray-900">
-                      <AppleIcon />
-                    </div>
-                    <span className="text-xs font-medium text-gray-700 hidden sm:inline">
-                      Apple
-                    </span>
-                  </button> */}
+                {/* Google (bouton custom mais avec GoogleLogin en fond) */}
+                <div className="flex justify-center w-full">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={handleGoogleError}
+                    useOneTap={false}
+                    text="signin_with"
+                    shape="pill"
+                    theme="outline"
+                    size="large"
+                    locale="fr"
+                  />
                 </div>
               </div>
 
@@ -360,15 +340,28 @@ export function Register() {
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     id="password"
                     value={formData.password}
                     onChange={(e) => handleChange("password", e.target.value)}
-                    className={`block w-full pl-10 pr-3 py-2.5 border ${
+                    className={`block w-full pl-10 pr-10 py-2.5 border ${
                       errors.password ? "border-red-300" : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                     placeholder="••••••••"
                   />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 {errors.password && (
                   <p className="mt-1 text-sm text-red-600">{errors.password}</p>
@@ -387,19 +380,34 @@ export function Register() {
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     id="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={(e) =>
                       handleChange("confirmPassword", e.target.value)
                     }
-                    className={`block w-full pl-10 pr-3 py-2.5 border ${
+                    className={`block w-full pl-10 pr-10 py-2.5 border ${
                       errors.confirmPassword
                         ? "border-red-300"
                         : "border-gray-300"
                     } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                     placeholder="••••••••"
                   />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="text-gray-400 hover:text-gray-500 focus:outline-none"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 {errors.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">

@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 // Import de useState pour gérer l'état local du composant
 // Nécessaire pour le bouton favori (favori ou non)
 import { useState, useEffect } from "react";
+import { useLocale } from "../../../contexts/LocaleContext.jsx";
 
 import { toggleFavorite, getFavorites } from "../../../utils/favoritesStorage";
 
@@ -21,28 +22,113 @@ export function FlightCard({ flight }) {
   console.log("FLIGHT RECU PAR FlightCard :", flight);
   // c'est pour la gestion des favoris, on peut supprimer ce console.log après les tests
   const [isFavorite, setIsFavorite] = useState(false);
+  const {
+    currency: selectedCurrency,
+    convertPrice,
+    formatPrice,
+    t,
+  } = useLocale();
 
-
+  // [FUSION] useEffect async : on essaie d'abord de lire depuis la BD, sinon on utilise localStorage
   useEffect(() => {
-    const favorites = getFavorites();
-    const exists = favorites.some((item) => item.id === flight.id);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsFavorite(exists);
+    const loadFavorite = async () => {
+      const token = localStorage.getItem('token');
+      // eslint-disable-next-line no-useless-assignment
+      let exists = false;
+
+      if (token) {
+        // Essayer de lire depuis la BD
+        try {
+          const favorites = await getFavorites(); // ← retourne un tableau d'objets { id } depuis la BD
+          exists = favorites.some((item) => item.id === flight.id);
+        } catch {
+          // Si l'API échoue, utiliser localStorage comme fallback
+          // eslint-disable-next-line react-hooks/immutability
+          const favorites = getFavoritesLocalStorage();
+          exists = favorites.some((item) => item.id === flight.id);
+        }
+      } else {
+        // Pas de token → utiliser localStorage
+        const favorites = getFavoritesLocalStorage();
+        exists = favorites.some((item) => item.id === flight.id);
+      }
+
+      setIsFavorite(exists);
+    };
+    loadFavorite();
   }, [flight.id]);
 
-  const handleFavoriteClick = (e) => {
+  // [FUSION] handleFavoriteClick async : on essaie de synchroniser avec la BD, sinon on utilise localStorage
+  const handleFavoriteClick = async (e) => {
     e.stopPropagation();
-    toggleFavorite(flight);
-    setIsFavorite((prev) => !prev);
+    // ajout fait pour le test, de la touche 🤍
+    const currentUser = localStorage.getItem("currentUser");
+    const user = currentUser ? JSON.parse(currentUser) : null;
+
+    if (!user) {
+      navigate("/login", {
+        state: {
+          from: window.location.pathname,
+          flightToSave: flight,
+          message: "Connecte-toi pour ajouter ce vol aux favoris.",
+        },
+      });
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    let updated;
+
+    if (token) {
+      // Essayer de synchroniser avec la BD
+      try {
+        // On passe un objet complet avec les données de recherche
+  updated = await toggleFavorite({
+    id: flight.id,
+    vol_id: flight.id,
+    origin: flight.origin,
+    destination: flight.destination,
+    price: flight.price}) // ← ajoute/supprime dans la BD
+      } catch {
+        // Si l'API échoue, utiliser localStorage comme fallback
+        updated = toggleFavoriteLocalStorage(flight);
+      }
+    } else {
+      // Pas de token → utiliser localStorage
+      updated = toggleFavoriteLocalStorage(flight);
+    }
+
+    // On recalcule isFavorite à partir du résultat retourné
+    const exists = updated.some((item) => item.id === flight.id);
+    setIsFavorite(exists);
+  };
+
+  // Helper : lire favoris depuis localStorage (fallback)
+  const getFavoritesLocalStorage = () => {
+    const favorites = localStorage.getItem("favoriteFlights");
+    return favorites ? JSON.parse(favorites) : [];
+  };
+
+  // Helper : ajouter/supprimer favoris dans localStorage (fallback)
+  const toggleFavoriteLocalStorage = (flight) => {
+    const favorites = getFavoritesLocalStorage();
+    const exists = favorites.some((item) => item.id === flight.id);
+
+    let updatedFavorites;
+    if (exists) {
+      updatedFavorites = favorites.filter((item) => item.id !== flight.id);
+    } else {
+      updatedFavorites = [...favorites, flight];
+    }
+
+    localStorage.setItem("favoriteFlights", JSON.stringify(updatedFavorites));
+    return updatedFavorites;
   };
 
   // Initialisation de la fonction de navigation fournie par React Router
   const navigate = useNavigate();
 
-  // État local pour savoir si le vol est marqué comme favori
-  // false = pas favori, true = favori
-  
-  // Début du rendu du composant
+   // Début du rendu du composant
   return (
     // Conteneur principal du card : fond blanc, coins arrondis, ombre qui grossit au survol
     <div className="relative bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border border-gray-200">
@@ -58,10 +144,18 @@ export function FlightCard({ flight }) {
 
         {/* Partie droite : prix et info "par passager" */}
         <div className="text-right">
-          <p className="text-xs text-gray-500">À partir de</p>{" "}
-          {/* Changement ici */}
+          <p className="text-xs text-gray-500">{t("from")}</p>{" "}
           <p className="text-3xl font-bold text-blue-600">
-            {flight.price ? `${flight.price} ${flight.currency}` : "Non dispo."}
+            {flight.price
+              ? formatPrice(
+                  convertPrice(
+                    flight.price,
+                    flight.currency || "EUR",
+                    selectedCurrency,
+                  ),
+                  selectedCurrency,
+                )
+              : t("noFlightsFound")}
           </p>
         </div>
 
@@ -103,8 +197,8 @@ export function FlightCard({ flight }) {
           {/* Texte indiquant "Direct" ou "1 escale"/"2 escales" */}
           <p className="text-xs text-gray-500 mt-1">
             {flight.stops === 0
-              ? "Direct"
-              : `${flight.stops} escale${flight.stops > 1 ? "s" : ""}`}
+              ? t("direct")
+              : `${flight.stops} ${flight.stops > 1 ? t("stops") : t("stop")}`}
           </p>
         </div>
 
@@ -136,11 +230,13 @@ export function FlightCard({ flight }) {
         {/* Bouton pour sélectionner ce vol et aller vers la page de détail */}
         <button
           onClick={() => {
-            navigate(`/flight/${flight.id}${flight.date ? `?date=${flight.date}` : ""}`);
+            navigate(
+              `/flight/${flight.id}${flight.date ? `?date=${flight.date}` : ""}`,
+            );
           }}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Sélectionner
+          {t("select")}
         </button>
       </div>
 
@@ -163,8 +259,7 @@ export function FlightCard({ flight }) {
       {flight.availableSeats < 20 ? (
         <div className="block mt-2">
           <span className="text-xs text-orange-600">
-            {/* Convertir en chaîne pour éviter les problèmes de type */}
-            Plus que {String(flight.availableSeats)} places disponibles
+            {t("seatsLeft", { count: String(flight.availableSeats) })}
           </span>
         </div>
       ) : null}

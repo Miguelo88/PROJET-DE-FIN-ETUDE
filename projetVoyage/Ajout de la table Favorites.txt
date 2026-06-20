@@ -1,0 +1,2 @@
+Pourquoi c’est mieux
+Une table de favoris séparée permet à un utilisateur d’avoir plusieurs vols favoris, et un vol peut être favori par plusieurs utilisateurs. C’est exactement le modèle relationnel classique pour une relation many-to-many.

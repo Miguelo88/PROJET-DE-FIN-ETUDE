@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Header } from "../composants/shared/Header";
 import { Footer } from "../composants/shared/Footer";
-
+import { getFavorites, toggleFavorite } from "../utils/favoritesStorage";
 // Composant principal du tableau de bord utilisateur
 export function UserDashboard() {
   const navigate = useNavigate();
@@ -35,11 +35,13 @@ export function UserDashboard() {
   // Onglet actif dans le dashboard
   const [activeTab, setActiveTab] = useState("favorites");
 
-  // Vols favoris sauvegardés dans localStorage
-  const [savedFlights, setSavedFlights] = useState(() => {
-    const favorites = localStorage.getItem("favoriteFlights");
-    return favorites ? JSON.parse(favorites) : [];
-  });
+  // // Vols favoris sauvegardés dans localStorage
+  // const [savedFlights, setSavedFlights] = useState(() => {
+  //   const favorites = getFavorites();
+  //   return favorites;
+  // });
+  // 1. Initialisez le state avec un tableau vide
+  const [savedFlights, setSavedFlights] = useState([]);
 
   // Données du profil pré-remplies à partir de l'utilisateur connecté
   const [profileData, setProfileData] = useState(() => {
@@ -314,25 +316,98 @@ export function UserDashboard() {
     setTravelCredit((prev) => prev + 50);
     showMessage("Crédit de voyage appliqué.");
   };
-
+ 
   // Affiche toutes les réservations
   const handleViewAllTrips = () => {
-    showMessage("Affichage de toutes les réservations.");
+   showMessage("Affichage de toutes les réservations.");
   };
 
-  // Si l’utilisateur n’est pas connecté, retour à l’accueil
-  useEffect(() => {
-    if (!currentUser) {
-      navigate("/");
+  // // Si l’utilisateur n’est pas connecté, retour à l’accueil
+  // useEffect(() => {
+  //   if (!currentUser) {
+  //     navigate("/");
+  //   }
+  // }, [currentUser, navigate]);
+
+  // // Supprime un vol des favoris
+  // const removeFavorite = (flightId) => {
+  //   const updatedFlights = savedFlights.filter((f) => f.id !== flightId);
+  //   setSavedFlights(updatedFlights);
+  //   localStorage.setItem("favoriteFlights", JSON.stringify(updatedFlights));
+
+  //   // ajout pour le bouton favoris
+  //   const favorites = getFavorites();
+  //   const updatedFavorites = favorites.filter((f) => f.id !== flightId);
+  //   localStorage.setItem("favoriteFlights", JSON.stringify(updatedFavorites));
+  //   setSavedFlights(updatedFavorites);
+  // };
+
+  // 1. Déclarer le State initialisé à vide
+// const [savedFlights, setSavedFlights] = useState([]);
+
+// Helper pour décoder un ID de vol et recréer les propriétés minimales exigées par le JSX
+const decodeFlightId = (flight) => {
+  // Si l'objet possède déjà les détails (cas du localStorage), on le retourne tel quel
+  if (flight.from || flight.airline) return flight;
+
+  try {
+    // Découpe l'ID (ex: "JFK-BCN-2026-06-18-0")
+    const parts = flight.id.split('-');
+    if (parts.length >= 4) {
+      return {
+        id: flight.id,
+        from: parts[0],                 // JFK
+        to: parts[1],                   // BCN
+        departureDate: `${parts[2]}-${parts[3]}-${parts[4]}`, // 2026-06-18
+        airline: "Compagnies partenaires",
+        price: flight.price || "Consulter",
+        returnDate: null
+      };
     }
-  }, [currentUser, navigate]);
+  } catch (e) {
+    console.error("Erreur décodage vol:", e);
+  }
+  return flight; // Fallback sécurisé
+};
 
-  // Supprime un vol des favoris
-  const removeFavorite = (flightId) => {
-    const updatedFlights = savedFlights.filter((f) => f.id !== flightId);
-    setSavedFlights(updatedFlights);
-    localStorage.setItem("favoriteFlights", JSON.stringify(updatedFlights));
+// 2. Charger et décoder les favoris asynchrones au montage
+useEffect(() => {
+  const loadDashboardFavorites = async () => {
+    try {
+      const favorites = await getFavorites(); // Appel de votre favori hybride
+      
+      // Transforme chaque favori pour s'assurer qu'il possède les clés attendues par le JSX
+      const formattedFavorites = (favorites || []).map(decodeFlightId);
+      
+      setSavedFlights(formattedFavorites);
+    } catch (error) {
+      console.error("Impossible de charger les favoris sur le Dashboard :", error);
+    }
   };
+
+  if (currentUser) {
+    loadDashboardFavorites();
+  } else {
+    navigate("/");
+  }
+}, [currentUser, navigate]);
+
+// 3. Modifier la fonction de suppression pour qu'elle utilise la BDD
+const removeFavorite = async (flightId) => {
+  try {
+    // Appel asynchrone de la fonction hybride (nettoie BDD ou LocalStorage selon connexion)
+    const updatedRaw = await toggleFavorite({ id: flightId });
+    
+    // Recalcule le formatage des éléments restants
+    const updatedFormatted = (updatedRaw || []).map(decodeFlightId);
+    
+    setSavedFlights(updatedFormatted);
+    showMessage("Vol retiré de vos favoris.");
+  } catch (error) {
+    console.error("Erreur suppression favori Dashboard :", error);
+  }
+};
+
 
   // Liste des onglets du dashboard
   const tabs = [
@@ -348,7 +423,6 @@ export function UserDashboard() {
   if (!currentUser) {
     return null;
   }
-
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

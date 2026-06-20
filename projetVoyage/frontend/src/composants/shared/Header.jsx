@@ -15,6 +15,7 @@ import {
   LogOut,
   Settings,
 } from "lucide-react";
+import { useLocale } from "../../contexts/LocaleContext.jsx";
 
 // SVG icons pour les réseaux sociaux
 const GoogleIcon = () => (
@@ -61,6 +62,19 @@ export function Header({ showBackButton = false }) {
 
   const [showAuthAlert, setShowAuthAlert] = useState(false);
 
+  const {
+    language,
+    currency,
+    region,
+    supportedLanguages,
+    supportedCurrencies,
+    supportedRegions,
+    setLanguage,
+    setCurrency,
+    setRegion,
+    t,
+  } = useLocale();
+
   useEffect(() => {
     const user = localStorage.getItem("currentUser");
     if (user) {
@@ -81,7 +95,7 @@ export function Header({ showBackButton = false }) {
     if (currentUser) {
       navigate("/user/favorites");
     } else {
-     setShowAuthAlert(true);
+      setShowAuthAlert(true);
       setTimeout(() => setShowAuthAlert(false), 3000);
     }
   };
@@ -119,9 +133,11 @@ export function Header({ showBackButton = false }) {
 
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
-       {showAuthAlert && (
+      {showAuthAlert && (
         <div className="fixed top-20 left-1/2 transform -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
-          <p className="text-sm font-medium">Veuillez vous connecter ou créer un compte</p>
+          <p className="text-sm font-medium">
+            Veuillez vous connecter ou créer un compte
+          </p>
         </div>
       )}
       <div className="max-w-7xl mx-auto px-4 py-4">
@@ -158,7 +174,10 @@ export function Header({ showBackButton = false }) {
                 className="flex items-center gap-2 text-gray-700 hover:text-blue-600 transition-colors"
               >
                 <Globe className="w-5 h-5" />
-                <span className="text-sm">FR / EUR</span>
+                <span className="text-sm">
+                  {supportedLanguages[language]?.label || "Français"} /{" "}
+                  {currency}
+                </span>
                 <ChevronDown className="w-4 h-4" />
               </button>
 
@@ -172,43 +191,60 @@ export function Header({ showBackButton = false }) {
                     {/* Language */}
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-xs font-semibold text-gray-500 mb-2">
-                        Langue
+                        {t("language")}
                       </p>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="fr">Français</option>
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="de">Deutsch</option>
-                        <option value="it">Italiano</option>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {Object.entries(supportedLanguages).map(
+                          ([code, item]) => (
+                            <option key={code} value={code}>
+                              {item.label}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
 
                     {/* Country */}
                     <div className="px-4 py-3 border-b border-gray-100">
                       <p className="text-xs font-semibold text-gray-500 mb-2">
-                        Pays
+                        {t("country")}
                       </p>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="fr">France</option>
-                        <option value="us">États-Unis</option>
-                        <option value="uk">Royaume-Uni</option>
-                        <option value="de">Allemagne</option>
-                        <option value="es">Espagne</option>
-                        <option value="it">Italie</option>
+                      <select
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {Object.entries(supportedRegions).map(
+                          ([code, label]) => (
+                            <option key={code} value={code}>
+                              {label}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
 
                     {/* Currency */}
                     <div className="px-4 py-3">
                       <p className="text-xs font-semibold text-gray-500 mb-2">
-                        Devise
+                        {t("currency")}
                       </p>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                        <option value="eur">EUR - Euro (€)</option>
-                        <option value="usd">USD - Dollar ($)</option>
-                        <option value="gbp">GBP - Livre (£)</option>
-                        <option value="chf">CHF - Franc suisse</option>
-                        <option value="jpy">JPY - Yen (¥)</option>
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        {Object.entries(supportedCurrencies).map(
+                          ([code, item]) => (
+                            <option key={code} value={code}>
+                              {`${code} - ${item.label} (${item.symbol})`}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
 
@@ -217,7 +253,7 @@ export function Header({ showBackButton = false }) {
                         onClick={() => setShowLanguageMenu(false)}
                         className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
                       >
-                        Enregistrer
+                        {t("save")}
                       </button>
                     </div>
                   </div>
@@ -382,41 +418,58 @@ export function Header({ showBackButton = false }) {
                   <div className="px-4 pb-3 space-y-3 bg-gray-50">
                     <div>
                       <label className="text-xs font-semibold text-gray-500 mb-1 block">
-                        Langue
+                        {t("language")}
                       </label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
-                        <option value="fr">Français</option>
-                        <option value="en">English</option>
-                        <option value="es">Español</option>
-                        <option value="de">Deutsch</option>
-                        <option value="it">Italiano</option>
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      >
+                        {Object.entries(supportedLanguages).map(
+                          ([code, item]) => (
+                            <option key={code} value={code}>
+                              {item.label}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
 
                     <div>
                       <label className="text-xs font-semibold text-gray-500 mb-1 block">
-                        Pays
+                        {t("country")}
                       </label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
-                        <option value="fr">France</option>
-                        <option value="us">États-Unis</option>
-                        <option value="uk">Royaume-Uni</option>
-                        <option value="de">Allemagne</option>
-                        <option value="es">Espagne</option>
-                        <option value="it">Italie</option>
+                      <select
+                        value={region}
+                        onChange={(e) => setRegion(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      >
+                        {Object.entries(supportedRegions).map(
+                          ([code, label]) => (
+                            <option key={code} value={code}>
+                              {label}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
 
                     <div>
                       <label className="text-xs font-semibold text-gray-500 mb-1 block">
-                        Devise
+                        {t("currency")}
                       </label>
-                      <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white">
-                        <option value="eur">EUR - Euro (€)</option>
-                        <option value="usd">USD - Dollar ($)</option>
-                        <option value="gbp">GBP - Livre (£)</option>
-                        <option value="chf">CHF - Franc suisse</option>
-                        <option value="jpy">JPY - Yen (¥)</option>
+                      <select
+                        value={currency}
+                        onChange={(e) => setCurrency(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                      >
+                        {Object.entries(supportedCurrencies).map(
+                          ([code, item]) => (
+                            <option key={code} value={code}>
+                              {`${code} - ${item.label} (${item.symbol})`}
+                            </option>
+                          ),
+                        )}
                       </select>
                     </div>
                   </div>

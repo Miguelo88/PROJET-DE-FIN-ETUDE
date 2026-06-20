@@ -73,7 +73,7 @@ const fetchAviasalesPrice = async ({
   //  ajout de cett API REST de travelpayouts pour faire fonctionner bookingLink
   const url = `https://api.travelpayouts.com/aviasales/v3/prices_for_dates?origin=${origin.toUpperCase()}&destination=${destination.toUpperCase()}&departure_at=${departureDate}&one_way=true&direct=false&sorting=price&limit=10&token=${token}`;
 
-    const linkresponse = await axios.get(url);
+  const linkresponse = await axios.get(url);
 
   return linkresponse.data?.data || [];
   const departMonth = `${departureDate.slice(0, 7)}-01`;
@@ -239,7 +239,7 @@ const mapFlightWithPrice = (
   date: flight.flight_date || date,
   flight_date: flight.flight_date || date,
   flight_status: flight.flight_status || "scheduled",
-  
+
   bookingLink: priceData?.link
     ? `https://www.aviasales.com${priceData.link}`
     : buildAviasalesSearchLink(origin, destination, date),
@@ -347,16 +347,84 @@ router.get("/search", async (req, res) => {
       currency,
     });
   } catch (error) {
+    // JE L'AI REMPLACE POUR AFFICHER LES MOCKDATA
+    // console.error(
+    //   "Erreur recherche vols:",
+    //   error.response?.data || error.message,
+    // );
+
     console.error(
-      "Erreur recherche vols:",
-      error.response?.data || error.message,
+      "Erreur recherche vols (Déclenchement du Fallback Mock):",
+      error.message,
     );
 
-    return res.status(500).json({
-      message: "Erreur lors de la recherche des vols",
-      error: error.response?.data?.error?.message || error.message,
+    // 🚀 SYSTÈME DE SECOURS SIMULÉ (MOCK) : Génère des vols pour éviter le blocage API
+    const mockDepartureFlights = [
+      {
+        id: `${req.query.origin}-${req.query.destination}-${req.query.departureDate}-0`,
+        airline: "Virgin Atlantic",
+        flightNumber: "VS6827",
+        airlineCode: "VS",
+        price: 250,
+        currency: req.query.currency || "EUR",
+        duration: "2h 25min",
+        departureTime: "19:30",
+        arrivalTime: "21:55",
+        stops: 0,
+        origin: req.query.origin,
+        destination: req.query.destination,
+        departureAirport: "Aéroport Principal",
+        arrivalAirport: "Aéroport Destination",
+        cabinClass: "Économique",
+        status: "active",
+        bookingLink: "#",
+        date: req.query.departureDate,
+      },
+    ];
+
+    let mockReturnFlights = [];
+    if (req.query.tripType === "round-trip" && req.query.returnDate) {
+      mockReturnFlights = [
+        {
+          id: `${req.query.destination}-${req.query.origin}-${req.query.returnDate}-0`,
+          airline: "Virgin Atlantic",
+          flightNumber: "VS6828",
+          airlineCode: "VS",
+          price: 230,
+          currency: req.query.currency || "EUR",
+          duration: "2h 30min",
+          departureTime: "08:00",
+          arrivalTime: "10:30",
+          stops: 0,
+          origin: req.query.destination,
+          destination: req.query.origin,
+          departureAirport: "Aéroport Destination",
+          arrivalAirport: "Aéroport Principal",
+          cabinClass: "Économique",
+          status: "active",
+          bookingLink: "#",
+          date: req.query.returnDate,
+        },
+      ];
+    }
+
+    // Renvoie les fausses données structurées exactement comme la vraie API
+    return res.json({
+      success: true,
+      count: mockDepartureFlights.length,
+      departureFlights: mockDepartureFlights,
+      returnFlights: mockReturnFlights,
+      passengers: Number(req.query.passengers || 1),
+      currency: req.query.currency || "EUR",
+      isMockData: true, // Petit indicateur utile pour vous
     });
   }
 });
+//     return res.status(500).json({
+//       message: "Erreur lors de la recherche des vols",
+//       error: error.response?.data?.error?.message || error.message,
+//     });
+//   }
+// });
 
 module.exports = router;
