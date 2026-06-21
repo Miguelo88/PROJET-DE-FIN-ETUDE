@@ -32,7 +32,7 @@ export function FlightCard({ flight }) {
   // [FUSION] useEffect async : on essaie d'abord de lire depuis la BD, sinon on utilise localStorage
   useEffect(() => {
     const loadFavorite = async () => {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       // eslint-disable-next-line no-useless-assignment
       let exists = false;
 
@@ -58,6 +58,24 @@ export function FlightCard({ flight }) {
     loadFavorite();
   }, [flight.id]);
 
+  // Effet pour vérifier si le vol est favori
+  useEffect(() => {
+    if (flight) {
+      const favorites = getFavorites();
+
+      const isFavorite =
+        Array.isArray(favorites) &&
+        favorites.some((fav) => fav.id === flight.id);
+
+      // const exists = favorites.some((item) => item.id === flight.id);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsFavorite(isFavorite);
+    }
+  }, [flight]);
+  // État pour gérer l'affichage du message temporaire
+  const [toastMessage, setToastMessage] = useState("");
+  
+
   // [FUSION] handleFavoriteClick async : on essaie de synchroniser avec la BD, sinon on utilise localStorage
   const handleFavoriteClick = async (e) => {
     e.stopPropagation();
@@ -76,19 +94,20 @@ export function FlightCard({ flight }) {
       return;
     }
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     let updated;
 
     if (token) {
       // Essayer de synchroniser avec la BD
       try {
         // On passe un objet complet avec les données de recherche
-  updated = await toggleFavorite({
-    id: flight.id,
-    vol_id: flight.id,
-    origin: flight.origin,
-    destination: flight.destination,
-    price: flight.price}) // ← ajoute/supprime dans la BD
+        updated = await toggleFavorite({
+          id: flight.id,
+          vol_id: flight.id,
+          origin: flight.origin,
+          destination: flight.destination,
+          price: flight.price,
+        }); // ← ajoute/supprime dans la BD
       } catch {
         // Si l'API échoue, utiliser localStorage comme fallback
         updated = toggleFavoriteLocalStorage(flight);
@@ -101,6 +120,22 @@ export function FlightCard({ flight }) {
     // On recalcule isFavorite à partir du résultat retourné
     const exists = updated.some((item) => item.id === flight.id);
     setIsFavorite(exists);
+
+    // AJOUT : Si le vol vient d'être ajouté (il existe maintenant dans les favoris)
+      if (exists) {
+        setToastMessage("Vol ajouté à vos favoris ❤ et dans vos alertes de prix🔔 ! ");
+        
+        // Disparaît automatiquement après 3 secondes (3000 ms)
+        setTimeout(() => {
+          setToastMessage("");
+        }, 10000);
+      } else {
+        // Optionnel : message si l'utilisateur le supprime des favoris
+        setToastMessage("Vol retiré de vos favoris ❤ et dans vos alertes de prix 🔔.");
+        setTimeout(() => {
+          setToastMessage("");
+        }, 10000);
+      }
   };
 
   // Helper : lire favoris depuis localStorage (fallback)
@@ -128,7 +163,7 @@ export function FlightCard({ flight }) {
   // Initialisation de la fonction de navigation fournie par React Router
   const navigate = useNavigate();
 
-   // Début du rendu du composant
+  // Début du rendu du composant
   return (
     // Conteneur principal du card : fond blanc, coins arrondis, ombre qui grossit au survol
     <div className="relative bg-white rounded-xl shadow-md hover:shadow-xl transition-shadow p-6 border border-gray-200">
@@ -263,6 +298,11 @@ export function FlightCard({ flight }) {
           </span>
         </div>
       ) : null}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-up">
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

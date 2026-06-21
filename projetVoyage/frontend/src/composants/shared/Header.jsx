@@ -131,6 +131,9 @@ export function Header({ showBackButton = false }) {
     }
   };
 
+  // 1. État pour contrôler l'affichage de la boîte d'aide
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+
   return (
     <header className="bg-white shadow-sm sticky top-0 z-50">
       {showAuthAlert && (
@@ -478,7 +481,10 @@ export function Header({ showBackButton = false }) {
 
               {/* Help */}
               <button
-                onClick={() => setShowMobileMenu(false)}
+                onClick={() => {
+                  setShowMobileMenu(false); // Ferme le menu mobile
+                  setIsHelpOpen(true); // Ouvre la boîte d'aide
+                }}
                 className="w-full px-4 py-3 flex items-center gap-3 text-gray-700 hover:bg-gray-50 transition-colors border-b border-gray-100"
               >
                 <HelpCircle className="w-5 h-5" />
@@ -541,6 +547,123 @@ export function Header({ showBackButton = false }) {
             </div>
           </>
         )}
+              {/* FENÊTRE POP-UP D'AIDE (MODAL) */}
+            {/* FENÊTRE POP-UP D'AIDE (MODAL) */}
+      {isHelpOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
+            
+            {/* Entête avec la CROIX DE FERMETURE */}
+            <div className="p-4 border-b flex items-center justify-between bg-gray-50 rounded-t-xl">
+              <div className="flex items-center gap-2 font-bold text-gray-800 text-base">
+                <HelpCircle className="w-5 h-5 text-blue-600" />
+                <span>Centre d'Aide & FAQ</span>
+              </div>
+              {/* LA MINI CROIX */}
+              <button
+                onClick={() => setIsHelpOpen(false)}
+                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors"
+                aria-label="Fermer l'aide"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contenu textuel complet avec défilement */}
+            <div className="p-6 overflow-y-auto space-y-6 text-sm text-gray-600 custom-scrollbar">
+              
+              {/* Message de bienvenue */}
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg text-blue-900">
+                <p className="font-medium">Bienvenue sur notre espace d'aide !</p>
+                <p className="text-xs mt-1 text-blue-700">Trouvez ici toutes les réponses pour naviguer facilement sur notre plateforme de gestion de vols.</p>
+              </div>
+
+              {/* Section 1 */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-1 text-base">
+                  🔍 Recherche et détails des vols
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Comment rechercher un vol ?</h4>
+                    <p className="mt-0.5">Rendez-vous sur la page d'accueil, saisissez votre ville de départ, votre destination ainsi que votre date de voyage. Cliquez sur <strong>Rechercher</strong> pour obtenir la liste des vols disponibles.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Où trouver les informations détaillées d'un vol ?</h4>
+                    <p className="mt-0.5">Dans la liste des résultats de recherche, cliquez simplement sur le vol qui vous intéresse. Vous serez redirigé vers la page des <strong>Détails du vol</strong> où vous trouverez les aéroports exacts, les horaires et les tarifs.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2 */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-1 text-base">
+                  🤍 Gestion de vos Favoris
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">À quoi sert l'icône en forme de cœur ?</h4>
+                    <p className="mt-0.5">Le cœur vous permet de sauvegarder un vol qui vous intéresse pour le retrouver plus tard rapidement, sans avoir à refaire votre recherche.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Puis-je ajouter des favoris si je n'ai pas de compte ou si je ne suis pas connecté ?</h4>
+                    <p className="mt-0.5">
+                      <strong>Oui !</strong> Vous pouvez cliquer sur le cœur même sans être connecté. Le site vous inviterá automatiquement à vous connecter ou à créer un compte. Un message jaune s'affichera pour vous guider : <em>"Connecte-toi pour ajouter ce vol aux favoris."</em>
+                    </p>
+                    <p className="mt-1 font-medium text-emerald-600">✨ Magie : Dès que votre connexion réussit, le vol est sauvegardé automatiquement et vous revenez directement sur votre page précédente !</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Comment savoir si un vol est bien enregistré dans mes favoris ?</h4>
+                    <p className="mt-0.5">Si le cœur est <strong>rouge</strong>, le vol est sauvegardé. Une notification apparaît en bas de votre écran : <em>"Vol ajouté à vos favoris ! ✨"</em>. Si le cœur est <strong>vide</strong>, le vol n'est pas dans vos favoris.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Comment retirer un vol de mes favoris ?</h4>
+                    <p className="mt-0.5">Cliquez simplement une nouvelle fois sur le cœur rouge (depuis la liste de recherche ou la page des détails). Le cœur deviendra vide et un message confirmera le retrait.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3 */}
+              <div className="space-y-4">
+                <h3 className="font-bold text-gray-900 flex items-center gap-2 border-b pb-1 text-base">
+                  🔐 Compte et Connexion
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Je n'arrive pas à me connecter, que faire ?</h4>
+                    <p className="mt-0.5">Vérifiez que votre adresse email et votre mot de passe sont correctement orthographiés. Vous pouvez cliquer sur l'icône en forme d'œil (👁️) dans le champ du mot de passe pour l'afficher en clair et vérifier votre saisie.</p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-gray-800">Mes favoris sont-ils enregistrés si je change d'appareil ?</h4>
+                    <p className="mt-0.5">Si vous êtes connecté à votre compte, vos favoris sont synchronisés en toute sécurité sur nos serveurs. Vous les retrouverez instantanément, que vous soyez sur votre ordinateur ou votre téléphone portable.</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section Support */}
+              <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg text-amber-900 text-xs">
+                <p className="font-bold flex items-center gap-1.5 mb-1">
+                  🛠️ Besoin d'une aide supplémentaire ?
+                </p>
+                <p>Notre support technique est à votre écoute ! Si vous rencontrez un message <em>"Erreur serveur"</em>, fermez votre navigateur et réessayez dans quelques instants.</p>
+              </div>
+
+            </div>
+
+            {/* Pied du pop-up */}
+            <div className="p-4 border-t bg-gray-50 rounded-b-xl flex justify-end">
+              <button
+                onClick={() => setIsHelpOpen(false)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-lg text-sm transition-colors shadow-sm"
+              >
+                Fermer
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       </div>
     </header>
   );

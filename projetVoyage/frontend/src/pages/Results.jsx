@@ -301,11 +301,11 @@ export function Results() {
             })}{" "}
             · {passengers} {passengers === "1" ? "passager" : "passagers"}
           </p>
-          <p className="text-sm text-gray-500 mt-2">
+          {/* <p className="text-sm text-gray-500 mt-2">
             {filteredFlights.length} vol
             {filteredFlights.length > 1 ? "s" : ""} trouvé
             {filteredFlights.length > 1 ? "s" : ""}
-          </p>
+          </p> */}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">

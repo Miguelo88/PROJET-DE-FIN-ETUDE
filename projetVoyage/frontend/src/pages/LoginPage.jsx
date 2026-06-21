@@ -1,11 +1,18 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom"; // AJOUT : useLocation pour récupérer le vol cliqué
-import { Mail, Lock, AlertCircle,Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, AlertCircle, Eye, EyeOff } from "lucide-react";
 // import { GoogleLogin } from "@react-oauth/google";
+// 1. IMPORTATION : Importez vos fonctions de favoris ici (ajustez le chemin selon votre projet)
+import { toggleFavorite } from "../utils/favoritesStorage"; 
+
 
 export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation(); // AJOUT : récupère les données envoyées depuis FlightCard
+  
+  const infoMessage = location.state?.message; 
+// "Connecte-toi pour ajouter ce vol aux favoris."
+
 
   const [formData, setFormData] = useState({
     email: "",
@@ -18,7 +25,6 @@ export function LoginPage() {
   // showPassword = false → mot de passe masqué (•••••)
   // showPassword = true → mot de passe visible en clair
   const [showPassword, setShowPassword] = useState(false);
-
 
   // AJOUT : vol à sauvegarder si l'utilisateur vient du bouton favori
   const flightToSave = location.state?.flightToSave;
@@ -65,7 +71,9 @@ export function LoginPage() {
       // AJOUT : si un vol a été sélectionné avant la connexion, on l'ajoute aux favoris
       if (flightToSave) {
         const existingFavorites = localStorage.getItem("favoriteFlights");
-        const favorites = existingFavorites ? JSON.parse(existingFavorites) : [];
+        const favorites = existingFavorites
+          ? JSON.parse(existingFavorites)
+          : [];
 
         const alreadyExists = favorites.some(
           (item) => item.id === flightToSave.id,
@@ -78,27 +86,54 @@ export function LoginPage() {
             JSON.stringify(updatedFavorites),
           );
         }
+        // Étape B : Sauvegarde en Base de Données via l'API (si disponible)
+        if (data.token && typeof toggleFavorite === "function") {
+          try {
+            await toggleFavorite({
+              id: flightToSave.id,
+              vol_id: flightToSave.id,
+              origin: flightToSave.origin || flightToSave.originCity,
+              destination: flightToSave.destination || flightToSave.destinationCity,
+              price: flightToSave.price
+            });
+          } catch (apiError) {
+            console.error("⚠️ Impossible de synchroniser le favori avec l'API après connexion:", apiError);
+            // Pas de blocage : le localStorage a déjà pris le relais au-dessus
+          }
+        }
       }
+      
 
-      // AJOUT : redirection vers la bonne page après connexion
-      if (data.user.role === "admin" || data.user.isAdmin === true) {
-        navigate("/admin/dashboard", { replace: true });
-      } else {
-        navigate(redirectTo, { replace: true });
+        // AJOUT : redirection vers la bonne page après connexion
+        if (data.user.role === "admin" || data.user.isAdmin === true) {
+          navigate("/admin/dashboard", { replace: true });
+        } else {
+          navigate(redirectTo, { replace: true });
+        }
+      } catch (error) {
+        console.error("❌ Erreur de connexion:", error);
+        setError("Erreur serveur");
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("❌ Erreur de connexion:", error);
-      setError("Erreur serveur");
-      setLoading(false);
-    }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
         <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-5 rounded-t-2xl">
+          
+          {/* 📍 COUPEZ-COLLEZ CE BLOC ICI : Juste au début de la carte */}
+        {infoMessage && (
+          <div className="mb-6 flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-lg shadow-sm animate-pulse-once">
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <p className="text-sm font-medium">{infoMessage}</p>
+          </div>
+        )}
+
           <h2 className="text-2xl font-bold text-white">Se connecter</h2>
-          <p className="text-blue-100 text-sm mt-1">Bienvenue sur TKSkySearch</p>
+          <p className="text-blue-100 text-sm mt-1">
+            Bienvenue sur TKSkySearch
+          </p>
         </div>
 
         <div className="px-6 py-5">
@@ -173,7 +208,11 @@ export function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     className="text-gray-400 hover:text-gray-500 focus:outline-none"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </div>

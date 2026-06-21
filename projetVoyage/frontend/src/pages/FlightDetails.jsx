@@ -66,25 +66,163 @@ export function FlightDetails() {
   }, [id, date]);
 
   // Effet pour vérifier si le vol est favori
-  useEffect(() => {
-    if (flight) {
-      const favorites = getFavorites();
-      // eslint-disable-next-line no-undef
-      const isFavorite = Array.isArray(favorites) && favorites.some(fav => fav.id === currentFlight.id);
+  // useEffect(() => {
+  //   if (flight) {
+  //     const favorites = getFavorites();
 
-      // const exists = favorites.some((item) => item.id === flight.id);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setIsFavorite(isFavorite);
-    }
-  }, [flight]);
+  //     const isFavorite =
+  //       Array.isArray(favorites) &&
+  //       favorites.some((fav) => fav.id === flight.id);
+
+  //     // const exists = favorites.some((item) => item.id === flight.id);
+  //     // eslint-disable-next-line react-hooks/set-state-in-effect
+  //     setIsFavorite(isFavorite);
+  //   }
+  // }, [flight]);
+
+  //   useEffect(() => {
+  //   if (!flight) return; // Sécurité : on ne fait rien si le vol n'est pas encore chargé
+
+  //   // On récupère directement la liste partagée par TOUS les composants
+  //   const savedFavorites = localStorage.getItem("favoriteFlights");
+  //   const favorites = savedFavorites ? JSON.parse(savedFavorites) : [];
+
+  //   // Vérification
+  //   const isFav = Array.isArray(favorites) && favorites.some((fav) => fav.id === flight.id);
+
+  //   // Mise à jour de l'état (sans alerte ESLint)
+  //   // eslint-disable-next-line react-hooks/set-state-in-effect
+  //   setIsFavorite(isFav);
+  // }, [flight]);
+
+    // Effet pour vérifier si le vol est favori au chargement initial
+  useEffect(() => {
+    if (!flight) return;
+
+    // Déclaration d'une fonction interne asynchrone
+    const checkFavoriteStatus = async () => {
+      try {
+        // 1. Attendre la réponse de l'API ou du localStorage
+        const favorites = await getFavorites(); 
+        
+        // 2. Vérifier si le vol actuel est dans la liste
+        const isFav = Array.isArray(favorites) && favorites.some((fav) => fav.id === flight.id);
+        
+        // 3. Mettre à jour l'état visuel (L'alerte ESLint va disparaître ici)
+        setIsFavorite(isFav);
+      } catch (err) {
+        console.error("Erreur lors de la vérification du favori :", err);
+        
+        // En cas d'erreur totale, repli de secours synchrone direct sur le localStorage
+        const saved = JSON.parse(localStorage.getItem("favoriteFlights") || "[]");
+        setIsFavorite(saved.some(fav => fav.id === flight.id));
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [flight]); // S'exécute dès que le vol est disponible
+
+
+  // État pour gérer l'affichage du message temporaire
+const [toastMessage, setToastMessage] = useState("");
+
+
 
   // Fonction pour gérer le clic favori
-  const handleFavoriteClick = (e) => {
+  // const handleFavoriteClick = (e) => {
+  //   e.stopPropagation();
+  //   toggleFavorite(flight);
+  //   setIsFavorite((prev) => !prev);
+  // };
+
+  const handleFavoriteClick = async (e) => {
     e.stopPropagation();
-    toggleFavorite(flight);
-    setIsFavorite((prev) => !prev);
+
+    const currentUser = localStorage.getItem("currentUser");
+    const user = currentUser ? JSON.parse(currentUser) : null;
+
+    if (!user) {
+      navigate("/login", {
+        state: {
+          from: window.location.pathname,
+          flightToSave: flight, // Fonctionnera parfaitement car 'flight' existe dans votre état local
+          message: "Connecte-toi pour ajouter ce vol aux favoris.",
+        },
+      });
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    let updated;
+
+    if (token) {
+      try {
+        // CORRECTION ICI : Assurez-vous que les propriétés de l'objet 'flight'
+        // correspondent bien à la structure de vos données dans FlightDetails
+        updated = await toggleFavorite({
+          id: flight.id,
+          vol_id: flight.id,
+          origin: flight.origin,
+          destination: flight.destination,
+          price: flight.price,
+        });
+      } catch {
+        updated = toggleFavoriteLocalStorage(flight);
+      }
+    } else {
+      updated = toggleFavoriteLocalStorage(flight);
+    }
+
+    // Piège évité : 'updated' doit être un tableau pour que '.some' fonctionne
+    if (Array.isArray(updated)) {
+      const exists = updated.some((item) => item.id === flight.id);
+      setIsFavorite(exists);
+          // ... (votre code précédent pour ajouter le favori) ...
+
+    if (Array.isArray(updated)) {
+      const exists = updated.some((item) => item.id === flight.id);
+      setIsFavorite(exists);
+
+      // AJOUT : Si le vol vient d'être ajouté (il existe maintenant dans les favoris)
+      if (exists) {
+        setToastMessage("Vol ajouté à vos favoris ❤ et dans vos alertes de prix 🔔 ! ");
+        
+        // Disparaît automatiquement après 3 secondes (3000 ms)
+        setTimeout(() => {
+          setToastMessage("");
+        }, 10000);
+      } else {
+        // Optionnel : message si l'utilisateur le supprime des favoris
+        setToastMessage("Vol retiré de vos favoris ❤ et dans vos alertes de prix 🔔.");
+        setTimeout(() => {
+          setToastMessage("");
+        }, 10000);
+      }
+    }
+
+    }
+  };
+  // Helper : lire favoris depuis localStorage (fallback)
+  const getFavoritesLocalStorage = () => {
+    const favorites = localStorage.getItem("favoriteFlights");
+    return favorites ? JSON.parse(favorites) : [];
   };
 
+  // Helper : ajouter/supprimer favoris dans localStorage (fallback)
+  const toggleFavoriteLocalStorage = (flight) => {
+    const favorites = getFavoritesLocalStorage();
+    const exists = favorites.some((item) => item.id === flight.id);
+
+    let updatedFavorites;
+    if (exists) {
+      updatedFavorites = favorites.filter((item) => item.id !== flight.id);
+    } else {
+      updatedFavorites = [...favorites, flight];
+    }
+
+    localStorage.setItem("favoriteFlights", JSON.stringify(updatedFavorites));
+    return updatedFavorites;
+  };
 
   // État de chargement
   if (loading) {
@@ -302,6 +440,11 @@ export function FlightDetails() {
       </div>
 
       <Footer />
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 z-50 bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg flex items-center space-x-2 animate-fade-in-up">
+          <span className="text-sm font-medium">{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }
