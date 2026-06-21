@@ -547,8 +547,7 @@ export function Header({ showBackButton = false }) {
             </div>
           </>
         )}
-              {/* FENÊTRE POP-UP D'AIDE (MODAL) */}
-            {/* FENÊTRE POP-UP D'AIDE (MODAL) */}
+             {/* FENÊTRE POP-UP D'AIDE (MODAL) */}
       {isHelpOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[85vh] flex flex-col">
