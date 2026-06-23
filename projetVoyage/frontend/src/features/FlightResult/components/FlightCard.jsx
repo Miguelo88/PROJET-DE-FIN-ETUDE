@@ -74,7 +74,6 @@ export function FlightCard({ flight }) {
   }, [flight]);
   // État pour gérer l'affichage du message temporaire
   const [toastMessage, setToastMessage] = useState("");
-  
 
   // [FUSION] handleFavoriteClick async : on essaie de synchroniser avec la BD, sinon on utilise localStorage
   const handleFavoriteClick = async (e) => {
@@ -122,20 +121,24 @@ export function FlightCard({ flight }) {
     setIsFavorite(exists);
 
     // AJOUT : Si le vol vient d'être ajouté (il existe maintenant dans les favoris)
-      if (exists) {
-        setToastMessage("Vol ajouté à vos favoris ❤ et dans vos alertes de prix🔔 ! ");
-        
-        // Disparaît automatiquement après 3 secondes (3000 ms)
-        setTimeout(() => {
-          setToastMessage("");
-        }, 10000);
-      } else {
-        // Optionnel : message si l'utilisateur le supprime des favoris
-        setToastMessage("Vol retiré de vos favoris ❤ et dans vos alertes de prix 🔔.");
-        setTimeout(() => {
-          setToastMessage("");
-        }, 10000);
-      }
+    if (exists) {
+      setToastMessage(
+        "Vol ajouté à vos favoris ❤ et dans vos alertes de prix🔔 ! ",
+      );
+
+      // Disparaît automatiquement après 3 secondes (3000 ms)
+      setTimeout(() => {
+        setToastMessage("");
+      }, 10000);
+    } else {
+      // Optionnel : message si l'utilisateur le supprime des favoris
+      setToastMessage(
+        "Vol retiré de vos favoris ❤ et dans vos alertes de prix 🔔.",
+      );
+      setTimeout(() => {
+        setToastMessage("");
+      }, 10000);
+    }
   };
 
   // Helper : lire favoris depuis localStorage (fallback)
@@ -181,7 +184,7 @@ export function FlightCard({ flight }) {
         <div className="text-right">
           <p className="text-xs text-gray-500">{t("from")}</p>{" "}
           <p className="text-3xl font-bold text-blue-600">
-            {flight.price
+            {/* {flight.price
               ? formatPrice(
                   convertPrice(
                     flight.price,
@@ -190,7 +193,24 @@ export function FlightCard({ flight }) {
                   ),
                   selectedCurrency,
                 )
-              : t("noFlightsFound")}
+              : t("noFlightsFound")} */}
+
+            {/* On vérifie si flight.price existe et n'est pas égal à 0 */}
+            {flight.price && flight.price !== 0 ? (
+              formatPrice(
+                convertPrice(
+                  flight.price,
+                  flight.currency || "EUR",
+                  selectedCurrency,
+                ),
+                selectedCurrency,
+              )
+            ) : (
+              // Nouveau message affiché en cas de valeur nulle
+              <span className="text-sm font-medium text-gray-400">
+                Prix indisponible
+              </span>
+            )}
           </p>
         </div>
 
@@ -211,7 +231,9 @@ export function FlightCard({ flight }) {
           {/* Heure de départ (ex: 08:30) */}
           <p className="text-2xl font-semibold">{flight.departureTime}</p>
           {/* Code ou nom de l'aéroport de départ (ex: Paris CDG) */}
-          <p className="text-sm text-gray-600">{flight.origin}</p>
+          <p className="text-sm text-gray-600">
+            {flight.originCity || flight.origin || "Ville inconnue"}
+          </p>
         </div>
 
         {/* Partie centrale : durée du vol, ligne de vol avec avion, nombre d'escales */}

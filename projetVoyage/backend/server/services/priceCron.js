@@ -2,13 +2,14 @@ const cron = require("node-cron");
 const nodemailer = require("nodemailer");
 const connexionDB = require("../config/connexionBD"); // Vérifiez le chemin vers votre config BD
 
-
 // Nettoyage automatique des espaces et symboles parasites du .env
-const cleanHost = process.env.EMAIL_HOST ? process.env.EMAIL_HOST.replace(/[:\s]/g, "") : "";
+const cleanHost = process.env.EMAIL_HOST
+  ? process.env.EMAIL_HOST.replace(/[:\s]/g, "")
+  : "";
 
 // ✉️ 1. Configuration du transporteur d'e-mails (Exemple avec Mailtrap pour les tests ou Gmail)
 const transporter = nodemailer.createTransport({
-//   host: process.env.EMAIL_HOST || "sandbox.smtp.mailtrap.io",
+  //   host: process.env.EMAIL_HOST || "sandbox.smtp.mailtrap.io",
   host: cleanHost, // 👈 Utilise la variable nettoyée (ex: "smtp.gmail.com")
   port: process.env.EMAIL_PORT || 2525,
   secure: true, //👈 Force la connexion sécurisée SSL requise par Gmail
@@ -22,7 +23,7 @@ const transporter = nodemailer.createTransport({
  * 🤖 Tâche Planifiée (Cron Job)
  * S'exécute automatiquement TOUTES LES NUITS à Minuit pile (00:00)
  */
-cron.schedule("0 0 * * *", async () => {
+cron.schedule("* * * * *", async () => {
   console.log(
     "🕛 [ROBOT CRON] Lancement de la vérification nocturne des prix...",
   );
