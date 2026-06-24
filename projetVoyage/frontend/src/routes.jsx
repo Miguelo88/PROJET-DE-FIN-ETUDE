@@ -8,11 +8,14 @@ import { MainLayout } from "./layouts/MainLayout";
 import { UserDashboard } from "./pages/UserDashBoard";
 import { AdminDashboard } from "./pages/AdminDashboard"; // 👈 Ajoutez votre page Admin
 import { ProtectedRoute } from "./composants/UI/ProtectedRoute"; // 👈 Désactivez le commentaire
+import { PageErreur404 } from "./pages/PageErreur404"; // 📍 IMPORTATION ICI
+
 
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: MainLayout,
+    errorElement: <PageErreur404 />, // 📍 Page d'erreur 404
     children: [
       // 🔓 Routes Publiques
       { index: true, Component: Home },
@@ -24,7 +27,7 @@ export const router = createBrowserRouter([
       // 🔒 Routes Sécurisées pour les SIMPLES UTILISATEURS (et admins)
       {
         element: <ProtectedRoute allowedRoles={["user", "admin"]} />,
-        children: [{ path: "/user/favorites", Component: UserDashboard }],
+        children: [{ path: "user/favorites", Component: UserDashboard }],
       },
 
       // 🔒 Routes exclusivement réservées aux ADMINS

@@ -145,6 +145,8 @@ export function Results() {
       console.error("Erreur lors du switch favori dans Result.jsx:", error);
     }
   };
+
+  
   
 
   useEffect(() => {

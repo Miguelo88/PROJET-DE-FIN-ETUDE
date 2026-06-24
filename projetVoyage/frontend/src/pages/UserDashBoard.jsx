@@ -155,19 +155,74 @@ export function UserDashboard() {
   };
 
   // Enregistre les modifications du profil
-  const handleSaveProfile = () => {
-    if (!currentUser) return;
+  // const handleSaveProfile = () => {
+  //   if (!currentUser) return;
 
-    const updatedUser = {
-      ...currentUser,
-      name: `${profileData.firstName} ${profileData.lastName}`.trim(),
-      email: profileData.email,
-    };
+  //   const updatedUser = {
+  //     ...currentUser,
+  //     name: `${profileData.firstName} ${profileData.lastName}`.trim(),
+  //     email: profileData.email,
+  //   };
 
-    setCurrentUser(updatedUser);
-    localStorage.setItem("currentUser", JSON.stringify(updatedUser));
-    showMessage("Profil enregistré avec succès.");
+  //   setCurrentUser(updatedUser);
+  //   localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+  //   showMessage("Profil enregistré avec succès.");
+  // };
+    // Enregistre les modifications du profil en base de données et en local
+  const handleSaveProfile = async () => {
+    if (!currentUser || !currentUser.id) {
+      showMessage("Erreur : Utilisateur non connecté.");
+      return;
+    }
+
+    try {
+      // 1. Appel HTTP vers votre route Back-end
+      const response = await fetch("http://localhost:3000/api/users/update", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          // Ajoutez le token si votre route est protégée par un middleware d'authentification
+          "Authorization": `Bearer ${localStorage.getItem("token")}` 
+        },
+        body: JSON.stringify({
+          id: currentUser.id, // On passe l'identifiant pour cibler la bonne ligne SQL
+          firstName: profileData.firstName,
+          lastName: profileData.lastName,
+          email: profileData.email,
+          birthDate: profileData.birthDate,
+          phone: profileData.phone,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        showMessage(data.message || "Impossible de sauvegarder les modifications.");
+        return;
+      }
+
+      // 2. Si la DB est mise à jour avec succès, on synchronise le localStorage et l'état
+      // On conserve le rôle et les autres propriétés de session indispensables de currentUser
+      const updatedUserSession = {
+        ...currentUser,
+        name: profileData.firstName,
+        lastname: profileData.lastName,
+        email: profileData.email,
+        birthDate: profileData.birthDate,
+        phone: data.user.phone, // Version nettoyée par le serveur
+      };
+
+      setCurrentUser(updatedUserSession);
+      localStorage.setItem("currentUser", JSON.stringify(updatedUserSession));
+      
+      showMessage("Profil enregistré avec succès en base de données ! ✨");
+
+    } catch (error) {
+      console.error("❌ Erreur lors de la sauvegarde du profil:", error);
+      showMessage("Erreur de connexion avec le serveur.");
+    }
   };
+
 
   // Ajoute un document voyage
   const handleAddDocument = () => {
@@ -253,10 +308,26 @@ export function UserDashboard() {
   };
 
   // Lance une réservation
+  // const handleBookNow = (flight) => {
+  //   showMessage(`Réservation en cours pour ${flight.from} → ${flight.to}`);
+  //   navigate("/");
+  // };
   const handleBookNow = (flight) => {
-    showMessage(`Réservation en cours pour ${flight.from} → ${flight.to}`);
-    navigate("/");
-  };
+  if (!flight || !flight.from || !flight.to) {
+    showMessage("Impossible de relancer la recherche pour ce vol.");
+    return;
+  }
+
+  // Encodage des critères du vol dans l'URL
+  // Formate la date pour s'assurer qu'elle est propre (YYYY-MM-DD)
+  const formattedDate = new Date(flight.departureDate).toISOString().split('T')[0];
+
+  // Redirection vers la page des résultats avec les critères en Query Params
+  navigate(
+    `/search?origin=${flight.from}&destination=${flight.to}&departureDate=${formattedDate}&tripType=one-way&passengers=1`
+  );
+};
+
 
   // Affiche les détails d’une réservation
   const handleViewReservationDetails = (label) => {

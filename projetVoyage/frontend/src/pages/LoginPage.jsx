@@ -30,7 +30,7 @@ export function LoginPage() {
   const flightToSave = location.state?.flightToSave;
 
   // AJOUT : route de retour après connexion
-  const redirectTo = location.state?.from || "/userDashboard";
+  const redirectTo = location.state?.from || "/user/favorites";
 
   // AJOUT : handler commun pour les champs du formulaire
   const handleChange = (e) => {

@@ -28,6 +28,7 @@ app.use("/api/flights", flightsRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/favorites", favoritesRoutes);
 
+
 // Port unique utilisé par ton backend (React se connecte sur localhost:3000)
 app.listen(3000, () => {
   console.log("Serveur en cours d'exécution sur http://localhost:3000");
