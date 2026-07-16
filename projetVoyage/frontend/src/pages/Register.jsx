@@ -8,7 +8,7 @@ import {
   User,
   Mail,
   Lock,
-  Calendar,
+  // Calendar,
   CheckCircle,
   Eye,
   EyeOff,
@@ -232,7 +232,7 @@ export function Register() {
                 Créer un compte
               </h1>
               <p className="text-blue-100 text-sm">
-                Rejoignez TKSkySearch pour réserver vos vols facilement
+                Rejoignez AeroPrix pour réserver vos vols facilement
               </p>
             </div>
 
@@ -416,13 +416,13 @@ export function Register() {
                 )}
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+              {/* <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
                 <Calendar className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-blue-700">
                   La date d'inscription sera automatiquement enregistrée lors de
                   la création de votre compte.
                 </p>
-              </div>
+              </div> */}
 
               <button
                 type="submit"

@@ -7,9 +7,9 @@ import { Footer } from "../composants/shared/Footer";
 import { airports } from "../data/mockFlights";
 import { Plane } from "lucide-react";
 import { getFavorites, toggleFavorite } from "../utils/favoritesStorage"; // Adaptez le chemin relatif
+import { useLocale } from "../contexts/LocaleContext";
 
-
-function mapApiFlightToCard(flightItem, index) {
+function mapApiFlightToCard(flightItem, index, selectedCurrency, convertPrice) {
   const departureTime =
     flightItem.departureTime ||
     (flightItem.departure?.scheduled
@@ -37,6 +37,16 @@ function mapApiFlightToCard(flightItem, index) {
     flightItem.price === null || flightItem.price === undefined
       ? null
       : Number(flightItem.price);
+  const convertedPrice =
+    priceValue === null
+      ? null
+      : Number(
+          convertPrice(
+            priceValue,
+            flightItem.currency || "EUR",
+            selectedCurrency,
+          ),
+        );
   const stopsValue =
     typeof flightItem.stops === "number"
       ? flightItem.stops
@@ -57,7 +67,9 @@ function mapApiFlightToCard(flightItem, index) {
       "N/A",
     airlineCode: flightItem.airline?.iata || "XX",
     price: priceValue,
-    currency: flightItem.currency || "EUR",
+    displayPrice: convertedPrice,
+    currency: selectedCurrency,
+    originalCurrency: flightItem.currency || "EUR",
     duration,
     departureTime,
     arrivalTime,
@@ -108,11 +120,13 @@ export function Results() {
   const [stops, setStops] = useState("all");
   const [selectedAirlines, setSelectedAirlines] = useState([]);
   const [sortBy, setSortBy] = useState("price-asc");
-
+  const { currency: selectedCurrency, convertPrice } = useLocale();
 
   // Stocke uniquement les chaînes d'IDs favoris (ex: ["JFK-BCN-2026-06-18-0"])
   const [favoriteIds, setFavoriteIds] = useState([]);
-  const [currentUser] = useState(() => JSON.parse(localStorage.getItem("currentUser")));
+  const [currentUser] = useState(() =>
+    JSON.parse(localStorage.getItem("currentUser")),
+  );
 
   // Charger les favoris de l'utilisateur connecté dès l'affichage des résultats
   useEffect(() => {
@@ -121,10 +135,13 @@ export function Results() {
       try {
         const favs = await getFavorites();
         // Extrait uniquement les IDs sous forme de tableau de chaînes de caractères
-        const ids = (favs || []).map(f => f.id || f);
+        const ids = (favs || []).map((f) => f.id || f);
         setFavoriteIds(ids);
       } catch (error) {
-        console.error("Erreur lors de la récupération des favoris dans Result.jsx:", error);
+        console.error(
+          "Erreur lors de la récupération des favoris dans Result.jsx:",
+          error,
+        );
       }
     };
 
@@ -136,18 +153,14 @@ export function Results() {
     try {
       // 1. Appel asynchrone de la fonction hybride (BDD ou LocalStorage)
       const updatedFavorites = await toggleFavorite(flight);
-      
+
       // 2. Extrait les nouveaux IDs pour mettre à jour l'affichage
-      const newIds = (updatedFavorites || []).map(f => f.id || f);
+      const newIds = (updatedFavorites || []).map((f) => f.id || f);
       setFavoriteIds(newIds);
-      
     } catch (error) {
       console.error("Erreur lors du switch favori dans Result.jsx:", error);
     }
   };
-
-  
-  
 
   useEffect(() => {
     if (!origin || !destination || !date) return;
@@ -178,7 +191,9 @@ export function Results() {
         console.log("ÉTAPE 2: data.departureFlights =", data.departureFlights);
 
         const mapped = Array.isArray(data.departureFlights)
-          ? data.departureFlights.map((f, i) => mapApiFlightToCard(f, i))
+          ? data.departureFlights.map((f, i) =>
+              mapApiFlightToCard(f, i, selectedCurrency, convertPrice),
+            )
           : [];
 
         // ✅ AJOUTE CETTE LIGNE ICI :
@@ -191,7 +206,10 @@ export function Results() {
 
         setFlights(mapped);
 
-        const max = Math.max(0, ...mapped.map((f) => f.price));
+        const max = Math.max(
+          0,
+          ...mapped.map((f) => Number(f.displayPrice ?? f.price ?? 0)),
+        );
         setMaxPrice(max);
         setPriceRange([0, max]);
 
@@ -202,7 +220,16 @@ export function Results() {
         setError(true);
         setLoading(false);
       });
-  }, [origin, destination, date, passengers, tripType, returnDate]);
+  }, [
+    origin,
+    destination,
+    date,
+    passengers,
+    tripType,
+    returnDate,
+    selectedCurrency,
+    convertPrice,
+  ]);
 
   useEffect(() => {
     if (loading || flights.length === 0) {
@@ -215,7 +242,9 @@ export function Results() {
 
     if (Array.isArray(priceRange) && priceRange.length === 2) {
       filtered = filtered.filter(
-        (f) => f.price >= priceRange[0] && f.price <= priceRange[1],
+        (f) =>
+          Number(f.displayPrice ?? f.price ?? 0) >= priceRange[0] &&
+          Number(f.displayPrice ?? f.price ?? 0) <= priceRange[1],
       );
     }
 
@@ -231,10 +260,18 @@ export function Results() {
 
     switch (sortBy) {
       case "price-asc":
-        filtered.sort((a, b) => a.price - b.price);
+        filtered.sort(
+          (a, b) =>
+            Number(a.displayPrice ?? a.price ?? 0) -
+            Number(b.displayPrice ?? b.price ?? 0),
+        );
         break;
       case "price-desc":
-        filtered.sort((a, b) => b.price - a.price);
+        filtered.sort(
+          (a, b) =>
+            Number(b.displayPrice ?? b.price ?? 0) -
+            Number(a.displayPrice ?? a.price ?? 0),
+        );
         break;
       case "duration-asc":
         filtered.sort((a, b) => {
@@ -346,9 +383,9 @@ export function Results() {
                 const isCurrentFlightFavorite = favoriteIds.includes(flight.id);
 
                 return (
-                  <FlightCard 
-                    key={flight.id} 
-                    flight={flight} 
+                  <FlightCard
+                    key={flight.id}
+                    flight={flight}
                     // ➕ On transmet les nouvelles propriétés au composant enfant
                     isFavorite={isCurrentFlightFavorite}
                     onToggleFavorite={() => handleToggleFavorite(flight)}
@@ -356,7 +393,6 @@ export function Results() {
                 );
               })
             )}
-            
           </div>
         </div>
       </div>

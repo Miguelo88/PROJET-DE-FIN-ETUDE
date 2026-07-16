@@ -43,17 +43,25 @@ export function UserDashboard() {
   // 1. Initialisez le state avec un tableau vide
   const [savedFlights, setSavedFlights] = useState([]);
 
+  const getProfileDataFromUser = (user) => {
+    const fullName = user?.name || "";
+    const nameParts = fullName.trim().split(/\s+/);
+
+    return {
+      firstName: user?.firstName || user?.firstname || nameParts[0] || "",
+      lastName:
+        user?.lastName || user?.lastname || nameParts.slice(1).join(" ") || "",
+      email: user?.email || "",
+      birthDate: user?.birthDate || "",
+      phone: user?.phone || "",
+    };
+  };
+
   // Données du profil pré-remplies à partir de l'utilisateur connecté
   const [profileData, setProfileData] = useState(() => {
     const user = localStorage.getItem("currentUser");
     const parsed = user ? JSON.parse(user) : null;
-    return {
-      firstName: parsed?.name?.split(" ")[0] || "",
-      lastName: parsed?.name?.split(" ")[1] || "",
-      email: parsed?.email || "",
-      birthDate: parsed?.birthDate || "",
-      phone: parsed?.phone || "",
-    };
+    return getProfileDataFromUser(parsed);
   });
 
   // Liste des documents voyage
@@ -131,6 +139,7 @@ export function UserDashboard() {
 
   // Message temporaire affiché après une action
   const [successMessage, setSuccessMessage] = useState(null);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Crédit voyage disponible
   const [travelCredit, setTravelCredit] = useState(0);
@@ -168,27 +177,27 @@ export function UserDashboard() {
   //   localStorage.setItem("currentUser", JSON.stringify(updatedUser));
   //   showMessage("Profil enregistré avec succès.");
   // };
-    // Enregistre les modifications du profil en base de données et en local
+  // Enregistre les modifications du profil en base de données et en local
   const handleSaveProfile = async () => {
     if (!currentUser || !currentUser.id) {
       showMessage("Erreur : Utilisateur non connecté.");
       return;
     }
 
+    setIsSavingProfile(true);
+
     try {
-      // 1. Appel HTTP vers votre route Back-end
-      const response = await fetch("http://localhost:3000/api/users/update", {
+      const response = await fetch("/api/users/update", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          // Ajoutez le token si votre route est protégée par un middleware d'authentification
-          "Authorization": `Bearer ${localStorage.getItem("token")}` 
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
         },
         body: JSON.stringify({
-          id: currentUser.id, // On passe l'identifiant pour cibler la bonne ligne SQL
-          firstName: profileData.firstName,
-          lastName: profileData.lastName,
-          email: profileData.email,
+          id: currentUser.id,
+          firstName: profileData.firstName.trim(),
+          lastName: profileData.lastName.trim(),
+          email: profileData.email.trim(),
           birthDate: profileData.birthDate,
           phone: profileData.phone,
         }),
@@ -197,32 +206,37 @@ export function UserDashboard() {
       const data = await response.json();
 
       if (!response.ok) {
-        showMessage(data.message || "Impossible de sauvegarder les modifications.");
+        showMessage(
+          data.message || "Impossible de sauvegarder les modifications.",
+          "error",
+        );
         return;
       }
 
-      // 2. Si la DB est mise à jour avec succès, on synchronise le localStorage et l'état
-      // On conserve le rôle et les autres propriétés de session indispensables de currentUser
+      const fullName =
+        `${profileData.firstName.trim()} ${profileData.lastName.trim()}`.trim();
       const updatedUserSession = {
         ...currentUser,
-        name: profileData.firstName,
-        lastname: profileData.lastName,
-        email: profileData.email,
+        name: fullName || profileData.firstName.trim(),
+        firstName: profileData.firstName.trim(),
+        lastName: profileData.lastName.trim(),
+        lastname: profileData.lastName.trim(),
+        email: profileData.email.trim(),
         birthDate: profileData.birthDate,
-        phone: data.user.phone, // Version nettoyée par le serveur
+        phone: data.user?.phone ?? profileData.phone,
       };
 
       setCurrentUser(updatedUserSession);
       localStorage.setItem("currentUser", JSON.stringify(updatedUserSession));
-      
-      showMessage("Profil enregistré avec succès en base de données ! ✨");
 
+      showMessage("Profil enregistré avec succès en base de données ! ✨");
     } catch (error) {
       console.error("❌ Erreur lors de la sauvegarde du profil:", error);
-      showMessage("Erreur de connexion avec le serveur.");
+      showMessage("Erreur de connexion avec le serveur.", "error");
+    } finally {
+      setIsSavingProfile(false);
     }
   };
-
 
   // Ajoute un document voyage
   const handleAddDocument = () => {
@@ -313,21 +327,22 @@ export function UserDashboard() {
   //   navigate("/");
   // };
   const handleBookNow = (flight) => {
-  if (!flight || !flight.from || !flight.to) {
-    showMessage("Impossible de relancer la recherche pour ce vol.");
-    return;
-  }
+    if (!flight || !flight.from || !flight.to) {
+      showMessage("Impossible de relancer la recherche pour ce vol.");
+      return;
+    }
 
-  // Encodage des critères du vol dans l'URL
-  // Formate la date pour s'assurer qu'elle est propre (YYYY-MM-DD)
-  const formattedDate = new Date(flight.departureDate).toISOString().split('T')[0];
+    // Encodage des critères du vol dans l'URL
+    // Formate la date pour s'assurer qu'elle est propre (YYYY-MM-DD)
+    const formattedDate = new Date(flight.departureDate)
+      .toISOString()
+      .split("T")[0];
 
-  // Redirection vers la page des résultats avec les critères en Query Params
-  navigate(
-    `/search?origin=${flight.from}&destination=${flight.to}&departureDate=${formattedDate}&tripType=one-way&passengers=1`
-  );
-};
-
+    // Redirection vers la page des résultats avec les critères en Query Params
+    navigate(
+      `/search?origin=${flight.from}&destination=${flight.to}&departureDate=${formattedDate}&tripType=one-way&passengers=1`,
+    );
+  };
 
   // Affiche les détails d’une réservation
   const handleViewReservationDetails = (label) => {
@@ -387,10 +402,10 @@ export function UserDashboard() {
     setTravelCredit((prev) => prev + 50);
     showMessage("Crédit de voyage appliqué.");
   };
- 
+
   // Affiche toutes les réservations
   const handleViewAllTrips = () => {
-   showMessage("Affichage de toutes les réservations.");
+    showMessage("Affichage de toutes les réservations.");
   };
 
   // // Si l’utilisateur n’est pas connecté, retour à l’accueil
@@ -414,71 +429,73 @@ export function UserDashboard() {
   // };
 
   // 1. Déclarer le State initialisé à vide
-// const [savedFlights, setSavedFlights] = useState([]);
+  // const [savedFlights, setSavedFlights] = useState([]);
 
-// Helper pour décoder un ID de vol et recréer les propriétés minimales exigées par le JSX
-const decodeFlightId = (flight) => {
-  // Si l'objet possède déjà les détails (cas du localStorage), on le retourne tel quel
-  if (flight.from || flight.airline) return flight;
+  // Helper pour décoder un ID de vol et recréer les propriétés minimales exigées par le JSX
+  const decodeFlightId = (flight) => {
+    // Si l'objet possède déjà les détails (cas du localStorage), on le retourne tel quel
+    if (flight.from || flight.airline) return flight;
 
-  try {
-    // Découpe l'ID (ex: "JFK-BCN-2026-06-18-0")
-    const parts = flight.id.split('-');
-    if (parts.length >= 4) {
-      return {
-        id: flight.id,
-        from: parts[0],                 // JFK
-        to: parts[1],                   // BCN
-        departureDate: `${parts[2]}-${parts[3]}-${parts[4]}`, // 2026-06-18
-        airline: "Compagnies partenaires",
-        price: flight.price || "Consulter",
-        returnDate: null
-      };
-    }
-  } catch (e) {
-    console.error("Erreur décodage vol:", e);
-  }
-  return flight; // Fallback sécurisé
-};
-
-// 2. Charger et décoder les favoris asynchrones au montage
-useEffect(() => {
-  const loadDashboardFavorites = async () => {
     try {
-      const favorites = await getFavorites(); // Appel de votre favori hybride
-      
-      // Transforme chaque favori pour s'assurer qu'il possède les clés attendues par le JSX
-      const formattedFavorites = (favorites || []).map(decodeFlightId);
-      
-      setSavedFlights(formattedFavorites);
-    } catch (error) {
-      console.error("Impossible de charger les favoris sur le Dashboard :", error);
+      // Découpe l'ID (ex: "JFK-BCN-2026-06-18-0")
+      const parts = flight.id.split("-");
+      if (parts.length >= 4) {
+        return {
+          id: flight.id,
+          from: parts[0], // JFK
+          to: parts[1], // BCN
+          departureDate: `${parts[2]}-${parts[3]}-${parts[4]}`, // 2026-06-18
+          airline: "Compagnies partenaires",
+          price: flight.price || "Consulter",
+          returnDate: null,
+        };
+      }
+    } catch (e) {
+      console.error("Erreur décodage vol:", e);
     }
+    return flight; // Fallback sécurisé
   };
 
-  if (currentUser) {
-    loadDashboardFavorites();
-  } else {
-    navigate("/");
-  }
-}, [currentUser, navigate]);
+  // 2. Charger et décoder les favoris asynchrones au montage
+  useEffect(() => {
+    const loadDashboardFavorites = async () => {
+      try {
+        const favorites = await getFavorites(); // Appel de votre favori hybride
 
-// 3. Modifier la fonction de suppression pour qu'elle utilise la BDD
-const removeFavorite = async (flightId) => {
-  try {
-    // Appel asynchrone de la fonction hybride (nettoie BDD ou LocalStorage selon connexion)
-    const updatedRaw = await toggleFavorite({ id: flightId });
-    
-    // Recalcule le formatage des éléments restants
-    const updatedFormatted = (updatedRaw || []).map(decodeFlightId);
-    
-    setSavedFlights(updatedFormatted);
-    showMessage("Vol retiré de vos favoris.");
-  } catch (error) {
-    console.error("Erreur suppression favori Dashboard :", error);
-  }
-};
+        // Transforme chaque favori pour s'assurer qu'il possède les clés attendues par le JSX
+        const formattedFavorites = (favorites || []).map(decodeFlightId);
 
+        setSavedFlights(formattedFavorites);
+      } catch (error) {
+        console.error(
+          "Impossible de charger les favoris sur le Dashboard :",
+          error,
+        );
+      }
+    };
+
+    if (currentUser) {
+      loadDashboardFavorites();
+    } else {
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
+
+  // 3. Modifier la fonction de suppression pour qu'elle utilise la BDD
+  const removeFavorite = async (flightId) => {
+    try {
+      // Appel asynchrone de la fonction hybride (nettoie BDD ou LocalStorage selon connexion)
+      const updatedRaw = await toggleFavorite({ id: flightId });
+
+      // Recalcule le formatage des éléments restants
+      const updatedFormatted = (updatedRaw || []).map(decodeFlightId);
+
+      setSavedFlights(updatedFormatted);
+      showMessage("Vol retiré de vos favoris.");
+    } catch (error) {
+      console.error("Erreur suppression favori Dashboard :", error);
+    }
+  };
 
   // Liste des onglets du dashboard
   const tabs = [
@@ -691,10 +708,21 @@ const removeFavorite = async (flightId) => {
 
             {activeTab === "profile" && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-4">
-                    Informations personnelles
-                  </h2>
+                <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-600">
+                  <div className="flex items-start justify-between gap-4 mb-4">
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Informations personnelles
+                      </h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Mettez à jour vos coordonnées pour garder votre profil à
+                        jour.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600">
+                      Profil principal
+                    </span>
+                  </div>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -786,9 +814,12 @@ const removeFavorite = async (flightId) => {
 
                     <button
                       onClick={handleSaveProfile}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      disabled={isSavingProfile}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      Enregistrer les modifications
+                      {isSavingProfile
+                        ? "Enregistrement..."
+                        : "Enregistrer les modifications"}
                     </button>
                   </div>
                 </div>

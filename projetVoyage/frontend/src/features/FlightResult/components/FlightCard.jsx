@@ -29,6 +29,10 @@ export function FlightCard({ flight }) {
     t,
   } = useLocale();
 
+  const displayPriceValue = Number.isFinite(Number(flight?.displayPrice))
+    ? Number(flight.displayPrice)
+    : flight?.price;
+
   // [FUSION] useEffect async : on essaie d'abord de lire depuis la BD, sinon on utilise localStorage
   useEffect(() => {
     const loadFavorite = async () => {
@@ -196,13 +200,15 @@ export function FlightCard({ flight }) {
               : t("noFlightsFound")} */}
 
             {/* On vérifie si flight.price existe et n'est pas égal à 0 */}
-            {flight.price && flight.price !== 0 ? (
+            {displayPriceValue && displayPriceValue !== 0 ? (
               formatPrice(
-                convertPrice(
-                  flight.price,
-                  flight.currency || "EUR",
-                  selectedCurrency,
-                ),
+                flight.displayPrice
+                  ? displayPriceValue
+                  : convertPrice(
+                      flight.price,
+                      flight.currency || "EUR",
+                      selectedCurrency,
+                    ),
                 selectedCurrency,
               )
             ) : (

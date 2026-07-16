@@ -42,7 +42,7 @@ export function MarketingManagement() {
       type: "percentage",
       startDate: "2026-06-01",
       endDate: "2026-08-31",
-      used: 45,
+      used: 5,
       limit: 100,
       active: true,
     },

@@ -378,10 +378,10 @@ export function SecurityManagement() {
                 <h3 className="text-lg font-semibold mb-4">Sources de trafic</h3>
                 <div className="space-y-3">
                   {[
-                    { source: "Direct", visits: 4523, percentage: 35.2 },
-                    { source: "Google", visits: 3912, percentage: 30.4 },
-                    { source: "Réseaux sociaux", visits: 2634, percentage: 20.5 },
-                    { source: "Referral", visits: 1778, percentage: 13.9 },
+                    { source: "Direct", visits: 15, percentage: 7.2 },
+                    { source: "Google", visits: 20, percentage: 10.4 },
+                    { source: "Réseaux sociaux", visits: 35, percentage: 20.5 },
+                    { source: "Referral", visits: 10, percentage: 8.9 },
                   ].map((item, index) => (
                     <div key={index} className="flex items-center gap-3">
                       <div className="flex-1">

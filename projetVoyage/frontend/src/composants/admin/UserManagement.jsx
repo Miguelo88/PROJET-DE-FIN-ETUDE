@@ -225,6 +225,7 @@ export function UserManagement() {
             }`}
           >
             Admins ({users.filter((u) => u.isAdmin).length})
+            {/* Admins */}
           </button>
           <button
             onClick={() => setFilterType("client")}
@@ -235,6 +236,7 @@ export function UserManagement() {
             }`}
           >
             Clients ({users.filter((u) => !u.isAdmin).length})
+            {/* Clients */}
           </button>
           <button
             onClick={() => setFilterType("blocked")}

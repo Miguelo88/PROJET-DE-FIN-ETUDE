@@ -164,7 +164,7 @@ export function Header({ showBackButton = false }) {
               className="flex items-center gap-2 hover:opacity-80 transition-opacity"
             >
               <Plane className="w-6 h-6 text-blue-600" />
-              <h1 className="text-xl font-bold">TKSkySearch</h1>
+              <h1 className="text-xl font-bold">AeroPrix</h1>
             </button>
           </div>
 

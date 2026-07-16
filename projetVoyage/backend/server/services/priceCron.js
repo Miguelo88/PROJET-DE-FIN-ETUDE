@@ -3,6 +3,9 @@ const nodemailer = require("nodemailer");
 const connexionDB = require("../config/connexionBD"); 
 const axios = require("axios"); 
 
+// 1. IMPORTATION DE LA FONCTION D'ENVOI WHATSAPP
+const { envoyerMessageWhatsApp } = require("../config/whatsapp"); 
+
 // Nettoyage du .env
 const cleanHost = process.env.EMAIL_HOST ? process.env.EMAIL_HOST.replace(/[:\s]/g, "") : "";
 
@@ -21,6 +24,10 @@ const transporter = nodemailer.createTransport({
  */
 const dictionaryIATA = {
   // --- Vos données initiales ---
+  "DLA": "Douala",
+  "PNR": "Pointe-Noire",
+  "NSI": "Yaoundé (Nsimalen)",
+
   "PAR": "Paris",
   "CDG": "Paris (CDG)",
   "ORY": "Paris (Orly)",
@@ -134,7 +141,7 @@ cron.schedule("0 0 * * *", async () => {
     const db = await connexionDB();
 
     const [alertes] = await db.execute(`
-      SELECT a.*, u.email, u.name 
+      SELECT a.*, u.email, u.name , u.phone
       FROM alerte a
       JOIN users u ON a.user_id = u.id
       WHERE a.active = 1
@@ -181,11 +188,11 @@ cron.schedule("0 0 * * *", async () => {
           from: '"Alerte Vol Moins Cher" <noreply@projetvoyage.com>',
           to: alerte.email,
           // ✅ Objet du mail dynamique avec les vrais noms de villes
-          subject: `📉 Baisse de prix sur votre vol ${originCity} ➔ ${destinationCity} ! - TKSkySearch`,
+          subject: `📉 Baisse de prix sur votre vol ${originCity} ➔ ${destinationCity} ! - AeroPrix`,
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
               <h2 style="color: #1d4ed8; text-align: center; margin-top: 0;">Bonne nouvelle ${alerte.name} ! 🎉</h2>
-              <p style="font-size: 15px; color: #374151; text-align: center;">Le prix du vol que vous surveillez sur <strong>TKSkySearch</strong> vient de baisser.</p>
+              <p style="font-size: 15px; color: #374151; text-align: center;">Le prix du vol que vous surveillez sur <strong>AeroPrix</strong> vient de baisser.</p>
               <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
               
               <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
@@ -225,6 +232,34 @@ cron.schedule("0 0 * * *", async () => {
         } catch (mailError) {
           console.error(`❌ Échec de l'envoi de l'e-mail:`, mailError);
         }
+
+         // 📱 ENVOI DE L'ALERTE WHATSAPP
+        if (alerte.phone) {
+          try {
+            const whatsappMessage = `📉 *BAISSE DE PRIX - AeroPrix* 📉\n\n` +
+                                    `Bonne nouvelle *${alerte.name}* ! 🎉\n\n` +
+                                    `Le vol que vous surveillez vient de baisser :\n` +
+                                    `✈️ *Itinéraire :* ${cleanRouteLabel}\n` +
+                                    `📅 *Départ :* ${departureDate}\n\n` +
+                                    `❌ Ancien prix : ~${basePriceCible} €~\n` +
+                                    `✅ *Nouveau prix : ${freshPrice} €* 🔥\n\n` +
+                                    `👉 Réservez vite ici : http://localhost:5173/dashboard`;
+
+            await envoyerMessageWhatsApp(alerte.phone, whatsappMessage);
+            console.log(`📱 Message WhatsApp envoyé à ${alerte.phone}`);
+          } catch (wsError) {
+            console.error(`❌ Échec de l'envoi WhatsApp pour ${alerte.phone}:`, wsError.message);
+          }
+        }
+
+        // 💾 MISE À JOUR DU NOUVEAU PRIX CIBLE EN BDD
+        await db.execute(
+          "UPDATE alerte SET prixCible = ? WHERE alerte_id = ?",
+          [freshPrice, alerte.alerte_id]
+        );
+        console.log(`💾 Base de données mise à jour avec le prix : ${freshPrice}€`);
+      
+
       }
     }
   } catch (error) {
@@ -349,11 +384,11 @@ module.exports = cron;
 //         const mailOptions = {
 //           from: '"Alerte Vol Moins Cher" <noreply@projetvoyage.com>',
 //           to: alerte.email,
-//           subject: `📉 Grande baisse de prix sur votre vol ${origin} ➔ ${destination} ! sur TKSkySearch`,
+//           subject: `📉 Grande baisse de prix sur votre vol ${origin} ➔ ${destination} ! sur AeroPrix`,
 //           html: `
 //             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
 //               <h2 style="color: #1d4ed8; text-align: center; margin-top: 0;">Bonne nouvelle ${alerte.name} ! 🎉</h2>
-//               <p style="font-size: 15px; color: #374151; text-align: center;">Le prix du vol que vous surveillez sur <strong>TKSkySearch</strong> vient de baisser.</p>
+//               <p style="font-size: 15px; color: #374151; text-align: center;">Le prix du vol que vous surveillez sur <strong>AeroPrix</strong> vient de baisser.</p>
 //               <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 16px 0;" />
 //               <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 20px;">
 //                 <p style="margin: 0; font-size: 16px; font-weight: bold; color: #111827;">Itinéraire : ${origin} ➔ ${destination}</p>
@@ -501,7 +536,7 @@ module.exports = cron;
 //         const mailOptions = {
 //           from: '"Alerte Vol Moins Cher" <noreply@projetvoyage.com>',
 //           to: alerte.email,
-//           subject: `📉 Grande baisse de prix sur votre vol ${origin} ➔ ${destination} ,dans le site TKSkySearch !`,
+//           subject: `📉 Grande baisse de prix sur votre vol ${origin} ➔ ${destination} ,dans le site AeroPrix !`,
 //           html: `
 //             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; padding: 24px; rounded-xl;">
 //               <h2 style="color: #1d4ed8; text-align: center;">Bonne nouvelle ${alerte.name} ! 🎉</h2>

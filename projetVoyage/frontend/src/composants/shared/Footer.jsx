@@ -33,7 +33,7 @@ export function Footer() {
           <div>
             <div className="flex items-center gap-2 mb-4">
               <Plane className="w-6 h-6 text-blue-400" />
-              <h3 className="font-bold text-white text-lg">TKSkySearch</h3>
+              <h3 className="font-bold text-white text-lg">AeroPrix</h3>
             </div>
             <p className="text-sm mb-4">
               Votre partenaire de confiance pour trouver les meilleurs vols au meilleur prix. Comparez et réservez en toute simplicité.
@@ -148,8 +148,8 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 flex-shrink-0" />
-                <a href="mailto:contact@tkskysearch.fr" className="hover:text-blue-400 transition-colors">
-                  contact@tkskysearch.fr
+                <a href="mailto:contact@aeroprix.fr" className="hover:text-blue-400 transition-colors">
+                  contact@aeroprix.fr
                 </a>
               </li>
             </ul>
@@ -159,7 +159,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-gray-800 pt-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm">
-            <p>© 2026 TKSkySearch. Tous droits réservés.</p>
+            <p>© 2026 aeroprix. Tous droits réservés.</p>
             <div className="flex gap-6">
               <a href="#" className="hover:text-blue-400 transition-colors">
                 Mentions légales

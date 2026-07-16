@@ -14,6 +14,7 @@ const supportedCurrencies = {
   GBP: { label: "Livre sterling", symbol: "£", rate: 0.88 },
   CHF: { label: "Franc suisse", symbol: "CHF", rate: 0.98 },
   JPY: { label: "Yen japonais", symbol: "¥", rate: 157 },
+  XOF: { label: "Franc CFA", symbol: "CFA", rate: 656 },
 };
 
 const supportedRegions = {

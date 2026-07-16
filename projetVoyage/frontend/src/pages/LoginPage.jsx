@@ -132,7 +132,7 @@ export function LoginPage() {
 
           <h2 className="text-2xl font-bold text-white">Se connecter</h2>
           <p className="text-blue-100 text-sm mt-1">
-            Bienvenue sur TKSkySearch
+            Bienvenue sur AeroPrix
           </p>
         </div>
 
