@@ -37,8 +37,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../UI/alertDialog";
-
+} from "../UI/AlertDialog";
+//modification
 export function UserManagement() {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -224,8 +224,7 @@ export function UserManagement() {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Admins ({users.filter((u) => u.isAdmin).length})
-            {/* Admins */}
+            Admins ({users.filter((u) => u.isAdmin).length}){/* Admins */}
           </button>
           <button
             onClick={() => setFilterType("client")}
@@ -235,8 +234,7 @@ export function UserManagement() {
                 : "bg-gray-100 text-gray-700 hover:bg-gray-200"
             }`}
           >
-            Clients ({users.filter((u) => !u.isAdmin).length})
-            {/* Clients */}
+            Clients ({users.filter((u) => !u.isAdmin).length}){/* Clients */}
           </button>
           <button
             onClick={() => setFilterType("blocked")}
