@@ -3,7 +3,8 @@
 // - Clock: horloge (pour afficher l'avion/cabine)
 // - MapPin: épingle (pour afficher la classe de cabine)
 // - Heart: cœur (pour le bouton favori)
-import { Plane, Clock, MapPin, Heart } from "lucide-react";
+// - TrendingUp: tendance de prix pour la prédiction
+import { Plane, Clock, MapPin, Heart, TrendingUp } from "lucide-react";
 
 // Import de useNavigate pour la navigation entre les pages
 // Permet de rediriger vers la page de détail du vol
@@ -32,6 +33,55 @@ export function FlightCard({ flight }) {
   const displayPriceValue = Number.isFinite(Number(flight?.displayPrice))
     ? Number(flight.displayPrice)
     : flight?.price;
+
+  const isConnectedUser =
+    typeof window !== "undefined" &&
+    Boolean(
+      localStorage.getItem("token") || localStorage.getItem("currentUser"),
+    );
+
+  const predictPrice = () => {
+    const basePrice = Number(displayPriceValue || flight?.price || 0);
+    if (!basePrice) return null;
+
+    const month = new Date().getMonth() + 1;
+    const seasonalBoost = [
+      1.08, 1.05, 1.02, 1.0, 0.97, 0.95, 0.93, 0.95, 0.98, 1.02, 1.06, 1.1,
+    ][month - 1];
+    const stopPenalty = (flight?.stops || 0) * 0.12;
+    const distanceBias =
+      /paris|tokyo|new york|duba|sydney|los angeles|londres|barcelone|rome/i.test(
+        String(flight?.origin || "") + String(flight?.destination || ""),
+      )
+        ? 0.08
+        : 0.03;
+
+    const predicted = Math.round(
+      basePrice * seasonalBoost * (1 + stopPenalty + distanceBias),
+    );
+    const delta = predicted - basePrice;
+    const label =
+      delta > 0 ? "à la hausse" : delta < 0 ? "à la baisse" : "stable";
+    const deltaText =
+      delta > 0
+        ? `augmenter de ${formatPrice(Math.abs(delta), selectedCurrency)}`
+        : delta < 0
+          ? `baisser de ${formatPrice(Math.abs(delta), selectedCurrency)}`
+          : "rester stable";
+
+    return {
+      predicted,
+      delta,
+      label,
+      deltaText,
+      basePrice,
+      seasonalBoost,
+      stopPenalty,
+      distanceBias,
+    };
+  };
+
+  const prediction = isConnectedUser ? predictPrice() : null;
 
   // [FUSION] useEffect async : on essaie d'abord de lire depuis la BD, sinon on utilise localStorage
   useEffect(() => {
@@ -277,17 +327,60 @@ export function FlightCard({ flight }) {
       {/* Section du bas : infos supplémentaires (avion, cabine) + bouton Sélectionner */}
       <div className="flex items-center justify-between pt-4 border-t border-gray-200">
         {/* Partie gauche : infos sur l'avion et la classe de cabine */}
-        <div className="flex items-center gap-4 text-sm text-gray-600">
-          {/* Type d'avion (ex: Boeing 737) avec icône horloge */}
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4" />
-            <span>{flight.aircraft}</span>
+        <div className="flex flex-col gap-2 text-sm text-gray-600">
+          <div className="flex items-center gap-4">
+            {/* Type d'avion (ex: Boeing 737) avec icône horloge */}
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{flight.aircraft}</span>
+            </div>
+            {/* Classe de cabine (ex: Économique) avec icône épingle */}
+            <div className="flex items-center gap-1">
+              <MapPin className="w-4 h-4" />
+              <span>{flight.cabinClass}</span>
+            </div>
           </div>
-          {/* Classe de cabine (ex: Économique) avec icône épingle */}
-          <div className="flex items-center gap-1">
-            <MapPin className="w-4 h-4" />
-            <span>{flight.cabinClass}</span>
-          </div>
+
+          {prediction && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4" />
+                <span className="font-semibold">
+                  Prédiction personnalisée pour votre vol
+                </span>
+              </div>
+              <p className="mt-2 leading-6">
+                Le prix estimé de ce vol pourrait atteindre{" "}
+                <span className="font-semibold">
+                  {formatPrice(prediction.predicted, selectedCurrency)}
+                </span>
+                . Selon les tendances actuelles, il devrait{" "}
+                {prediction.deltaText}.
+              </p>
+              {/* <div className="mt-2 text-xs text-emerald-700">
+                <p>
+                  • Prix de référence :{" "}
+                  {formatPrice(prediction.basePrice, selectedCurrency)}
+                </p>
+                <p>
+                  • Facteur saisonnier :{" "}
+                  {Math.round(prediction.seasonalBoost * 100)}%
+                </p>
+                <p>
+                  • Impact des escales :{" "}
+                  {Math.round(prediction.stopPenalty * 100)}%
+                </p>
+                <p>
+                  • Impact de la route :{" "}
+                  {Math.round(prediction.distanceBias * 100)}%
+                </p>
+              </div> */}
+              {/* <p className="mt-2 text-[11px] text-emerald-700">
+                Cette information est réservée aux voyageurs connectés et sert à
+                vous guider dans votre décision de réservation.
+              </p> */}
+            </div>
+          )}
         </div>
 
         {/* Bouton pour sélectionner ce vol et aller vers la page de détail */}

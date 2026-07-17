@@ -5,6 +5,56 @@ import { Footer } from "../composants/shared/Footer";
 import { Plane, Clock, Users, MapPin, Calendar, Heart } from "lucide-react";
 import { toggleFavorite, getFavorites } from "../utils/favoritesStorage";
 
+const getDateParts = (value) => {
+  if (!value) return null;
+
+  const rawDate = String(value).trim();
+  const isoMatch = rawDate.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return {
+      day: String(day).padStart(2, "0"),
+      month: String(month).padStart(2, "0"),
+      year,
+    };
+  }
+
+  const europeanMatch = rawDate.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (europeanMatch) {
+    const [, day, month, year] = europeanMatch;
+    return {
+      day: String(day).padStart(2, "0"),
+      month: String(month).padStart(2, "0"),
+      year,
+    };
+  }
+
+  const parsedDate = new Date(rawDate);
+  if (!Number.isNaN(parsedDate.getTime())) {
+    return {
+      day: String(parsedDate.getDate()).padStart(2, "0"),
+      month: String(parsedDate.getMonth() + 1).padStart(2, "0"),
+      year: String(parsedDate.getFullYear()),
+    };
+  }
+
+  return null;
+};
+
+const buildAviasalesSearchLink = (origin, destination, date) => {
+  const originCode = String(origin || "")
+    .trim()
+    .toUpperCase();
+  const destinationCode = String(destination || "")
+    .trim()
+    .toUpperCase();
+  const dateParts = getDateParts(date);
+
+  if (!originCode || !destinationCode || !dateParts) return null;
+
+  return `https://www.aviasales.com/search/${originCode}${dateParts.day}${dateParts.month}${dateParts.year}${destinationCode}1`;
+};
+
 export function FlightDetails() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -95,7 +145,7 @@ export function FlightDetails() {
   //   setIsFavorite(isFav);
   // }, [flight]);
 
-    // Effet pour vérifier si le vol est favori au chargement initial
+  // Effet pour vérifier si le vol est favori au chargement initial
   useEffect(() => {
     if (!flight) return;
 
@@ -103,30 +153,31 @@ export function FlightDetails() {
     const checkFavoriteStatus = async () => {
       try {
         // 1. Attendre la réponse de l'API ou du localStorage
-        const favorites = await getFavorites(); 
-        
+        const favorites = await getFavorites();
+
         // 2. Vérifier si le vol actuel est dans la liste
-        const isFav = Array.isArray(favorites) && favorites.some((fav) => fav.id === flight.id);
-        
+        const isFav =
+          Array.isArray(favorites) &&
+          favorites.some((fav) => fav.id === flight.id);
+
         // 3. Mettre à jour l'état visuel (L'alerte ESLint va disparaître ici)
         setIsFavorite(isFav);
       } catch (err) {
         console.error("Erreur lors de la vérification du favori :", err);
-        
+
         // En cas d'erreur totale, repli de secours synchrone direct sur le localStorage
-        const saved = JSON.parse(localStorage.getItem("favoriteFlights") || "[]");
-        setIsFavorite(saved.some(fav => fav.id === flight.id));
+        const saved = JSON.parse(
+          localStorage.getItem("favoriteFlights") || "[]",
+        );
+        setIsFavorite(saved.some((fav) => fav.id === flight.id));
       }
     };
 
     checkFavoriteStatus();
   }, [flight]); // S'exécute dès que le vol est disponible
 
-
   // État pour gérer l'affichage du message temporaire
-const [toastMessage, setToastMessage] = useState("");
-
-
+  const [toastMessage, setToastMessage] = useState("");
 
   // Fonction pour gérer le clic favori
   // const handleFavoriteClick = (e) => {
@@ -177,29 +228,32 @@ const [toastMessage, setToastMessage] = useState("");
     if (Array.isArray(updated)) {
       const exists = updated.some((item) => item.id === flight.id);
       setIsFavorite(exists);
-          // ... (votre code précédent pour ajouter le favori) ...
+      // ... (votre code précédent pour ajouter le favori) ...
 
-    if (Array.isArray(updated)) {
-      const exists = updated.some((item) => item.id === flight.id);
-      setIsFavorite(exists);
+      if (Array.isArray(updated)) {
+        const exists = updated.some((item) => item.id === flight.id);
+        setIsFavorite(exists);
 
-      // AJOUT : Si le vol vient d'être ajouté (il existe maintenant dans les favoris)
-      if (exists) {
-        setToastMessage("Vol ajouté à vos favoris ❤ et dans vos alertes de prix 🔔 ! ");
-        
-        // Disparaît automatiquement après 3 secondes (3000 ms)
-        setTimeout(() => {
-          setToastMessage("");
-        }, 10000);
-      } else {
-        // Optionnel : message si l'utilisateur le supprime des favoris
-        setToastMessage("Vol retiré de vos favoris ❤ et dans vos alertes de prix 🔔.");
-        setTimeout(() => {
-          setToastMessage("");
-        }, 10000);
+        // AJOUT : Si le vol vient d'être ajouté (il existe maintenant dans les favoris)
+        if (exists) {
+          setToastMessage(
+            "Vol ajouté à vos favoris ❤ et dans vos alertes de prix 🔔 ! ",
+          );
+
+          // Disparaît automatiquement après 3 secondes (3000 ms)
+          setTimeout(() => {
+            setToastMessage("");
+          }, 10000);
+        } else {
+          // Optionnel : message si l'utilisateur le supprime des favoris
+          setToastMessage(
+            "Vol retiré de vos favoris ❤ et dans vos alertes de prix 🔔.",
+          );
+          setTimeout(() => {
+            setToastMessage("");
+          }, 10000);
+        }
       }
-    }
-
     }
   };
   // Helper : lire favoris depuis localStorage (fallback)
@@ -425,8 +479,16 @@ const [toastMessage, setToastMessage] = useState("");
         ) : (
           <button
             onClick={() => {
-              const fallbackLink = `https://www.aviasales.com/search/${flight.origin}${date.split("-")[0]}${date.split("-")[1]}${date.split("-")[2]}${flight.destination}1`;
-              window.open(fallbackLink, "_blank", "noopener,noreferrer");
+              const fallbackLink = buildAviasalesSearchLink(
+                flight.origin,
+                flight.destination,
+                date,
+              );
+              if (fallbackLink) {
+                window.open(fallbackLink, "_blank", "noopener,noreferrer");
+              } else {
+                window.alert("Lien de réservation non disponible pour ce vol.");
+              }
             }}
             className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-lg"
           >

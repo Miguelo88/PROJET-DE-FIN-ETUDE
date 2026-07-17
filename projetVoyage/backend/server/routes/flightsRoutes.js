@@ -158,15 +158,54 @@ const formatDuration = (departureScheduled, arrivalScheduled) => {
 };
 
 // Génère un lien de recherche Aviasales si aucun lien direct n’existe
+const getDateParts = (value) => {
+  if (!value) return null;
+
+  const rawDate = String(value).trim();
+  const isoMatch = rawDate.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+  if (isoMatch) {
+    const [, year, month, day] = isoMatch;
+    return {
+      day: String(day).padStart(2, "0"),
+      month: String(month).padStart(2, "0"),
+      year,
+    };
+  }
+
+  const europeanMatch = rawDate.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (europeanMatch) {
+    const [, day, month, year] = europeanMatch;
+    return {
+      day: String(day).padStart(2, "0"),
+      month: String(month).padStart(2, "0"),
+      year,
+    };
+  }
+
+  const parsedDate = new Date(rawDate);
+  if (!Number.isNaN(parsedDate.getTime())) {
+    return {
+      day: String(parsedDate.getDate()).padStart(2, "0"),
+      month: String(parsedDate.getMonth() + 1).padStart(2, "0"),
+      year: String(parsedDate.getFullYear()),
+    };
+  }
+
+  return null;
+};
+
 const buildAviasalesSearchLink = (origin, destination, date) => {
-  if (!origin || !destination || !date) return null;
+  const originCode = String(origin || "")
+    .trim()
+    .toUpperCase();
+  const destinationCode = String(destination || "")
+    .trim()
+    .toUpperCase();
+  const dateParts = getDateParts(date);
 
-  const formattedDate = date.slice(0, 10); // Format YYYY-MM-DD
-  const day = formattedDate.split("-")[0];
-  const month = formattedDate.split("-")[1];
-  const year = formattedDate.split("-")[2];
+  if (!originCode || !destinationCode || !dateParts) return null;
 
-  return `https://www.aviasales.com/search/${origin}${day}${month}${year}${destination}1`;
+  return `https://www.aviasales.com/search/${originCode}${dateParts.day}${dateParts.month}${dateParts.year}${destinationCode}1`;
 };
 
 // Fusionne les données du vol avec son prix
@@ -271,7 +310,7 @@ router.get("/search", async (req, res) => {
       if (!selectedPrice || !selectedPrice.value || selectedPrice.value === 0) {
         selectedPrice = {
           value: Math.floor(Math.random() * (750 - 150 + 1)) + 150, // Génère entre 150 et 750
-          isRandom: true
+          isRandom: true,
         };
       }
 
@@ -308,10 +347,14 @@ router.get("/search", async (req, res) => {
         let selectedPrice = selectBestPriceForFlight(returnPrices, flight);
 
         // Si selectedPrice est introuvable, faux, ou vaut 0, on génère un prix aléatoire
-        if (!selectedPrice || !selectedPrice.value || selectedPrice.value === 0) {
+        if (
+          !selectedPrice ||
+          !selectedPrice.value ||
+          selectedPrice.value === 0
+        ) {
           selectedPrice = {
             value: Math.floor(Math.random() * (750 - 150 + 1)) + 150, // Génère entre 150 et 750
-            isRandom: true
+            isRandom: true,
           };
         }
 
@@ -353,8 +396,6 @@ router.get("/search", async (req, res) => {
 });
 
 module.exports = router;
-
-
 
 // const express = require("express");
 // const axios = require("axios");
@@ -699,7 +740,6 @@ module.exports = router;
 //             fallback: true
 //           };
 //         }
-
 
 //         return mapFlightWithPrice(
 //           flight,

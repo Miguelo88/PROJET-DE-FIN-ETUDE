@@ -1,0 +1,39 @@
+Puisque vous êtes en mode développement (ou en phase de test de traduction de données), l'objectif est d'utiliser des couples de villes (itinéraires) à très fort volume de recherche et ultra-stables mondialement.
+Ces liaisons aériennes majeures garantissent que les API de [Travelpayouts](https://www.travelpayouts.com/) (comme Aviasales, WayAway ou Kiwi) renverront systématiquement de vrais billets disponibles, peu importe la saisonnalité ou la langue. [1] 
+Voici les combinaisons de villes les plus rentables et fiables à tester dans votre application :
+## 1. Les liaisons Intercontinentales Majeures (Gros budgets, fortes commissions)
+Ce sont les routes les plus recherchées au monde pour le tourisme et les affaires. Les billets y sont toujours disponibles :
+
+* 
+* Paris (PAR) ⇄ New York (NYC) (Le classique ultime)
+* Londres (LON) ⇄ Dubaï (DXB) (Très fort taux de réservation en classe Business)
+* Paris (PAR) ⇄ Tokyo (TYO)
+* Londres (LON) ⇄ New York (NYC)
+* 
+
+## 2. Les liaisons Touristiques Intra-Européennes (Volume de conversion massif)
+Ces trajets à bas coût (Low-cost) génèrent d'immenses volumes de clics et des réservations instantanées de dernière minute :
+
+* 
+* Paris (PAR) ⇄ Barcelone (BCN)
+* Londres (LON) ⇄ Majorque / Palma (PMI)
+* Francfort (FRA) ⇄ Antalya (AYT)
+* Paris (PAR) ⇄ Marrakech (RAK)
+* 
+
+## 3. Les Hubs Asiatiques (Idéal pour tester le Multi-destinations)
+Si votre IA doit tester des trajets complexes ou avec escales, ces villes disposent des plus grands catalogues de billets synchronisés sur le réseau Travelpayouts :
+
+* 
+* Singapour (SIN) ⇄ Bangkok (BKK)
+* Kuala Lumpur (KUL) ⇄ Jakarta (JKT)
+* Séoul (SEL) ⇄ Tokyo (TYO)
+* 
+
+------------------------------
+## 💡 Conseil technique pour votre mode traduction
+L'API de [Travelpayouts autocomplete](https://support.travelpayouts.com/hc/en-us/articles/203956153-API-for-mobile-apps) est parfois sensible à l'orthographe selon la langue configurée (&locale=fr ou &locale=en). [1] 
+Pour éviter qu'une mauvaise traduction bloque la génération du billet, forcez votre fichier mockFlights ou votre IA à toujours transmettre les codes IATA à 3 lettres (ex: PAR, NYC, DXB) plutôt que les noms complets des villes. Les codes IATA sont universels et garantissent 100 % de réussite lors de la redirection vers l'achat du billet.
+Voulez-vous que l'on vérifie si votre fonction parseFlightQuery renvoie correctement les codes IATA de ces grandes villes lors d'une recherche ?
+
+[1] [https://www.travelpayouts.com](https://www.travelpayouts.com/brands/blog/api/)
