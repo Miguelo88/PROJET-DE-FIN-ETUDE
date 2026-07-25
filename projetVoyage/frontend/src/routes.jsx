@@ -9,7 +9,7 @@ import { UserDashboard } from "./pages/UserDashBoard";
 import { AdminDashboard } from "./pages/AdminDashboard"; // 👈 Ajoutez votre page Admin
 import { ProtectedRoute } from "./composants/UI/ProtectedRoute"; // 👈 Désactivez le commentaire
 import { PageErreur404 } from "./pages/PageErreur404"; // 📍 IMPORTATION ICI
-
+import {Checkout} from  "./pages/Checkout"
 
 export const router = createBrowserRouter([
   {
@@ -23,11 +23,13 @@ export const router = createBrowserRouter([
       { path: "flight/:id", Component: FlightDetails },
       { path: "register", Component: Register },
       { path: "login", Component: LoginPage },
+      { path: "checkout", Component: Checkout },
 
       // 🔒 Routes Sécurisées pour les SIMPLES UTILISATEURS (et admins)
       {
         element: <ProtectedRoute allowedRoles={["user", "admin"]} />,
-        children: [{ path: "user/favorites", Component: UserDashboard }],
+        children: [{ path: "user/favorites", Component: UserDashboard }
+        ],
       },
 
       // 🔒 Routes exclusivement réservées aux ADMINS

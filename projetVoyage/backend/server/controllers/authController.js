@@ -70,7 +70,7 @@ async function registerUser(req, res) {
 // // const jwt = require('jsonwebtoken');
 
 // // Utilisez votre propre Client ID Google
-// const client = new OAuth2Client("385666932569-dj85vhevi0drutqt82rv1vc6ffnbuo7a.apps.googleusercontent.com");
+// const client = new OAuth2Client("45806419430-ol7m0ort2aug9959rr7q9q3f5d4ja09b.apps.googleusercontent.com");
 
 // async function googleLogin(req, res) {
 //   try {
@@ -83,7 +83,7 @@ async function registerUser(req, res) {
 //     // 1. Validation et décodage sécurisé du jeton Google côté serveur
 //     const ticket = await client.verifyIdToken({
 //         idToken: token,
-//         audience: "385666932569-dj85vhevi0drutqt82rv1vc6ffnbuo7a.apps.googleusercontent.com",
+//         audience: "45806419430-ol7m0ort2aug9959rr7q9q3f5d4ja09b.apps.googleusercontent.com",
 //     });
     
 //     const payloadGoogle = ticket.getPayload();
@@ -140,26 +140,114 @@ async function registerUser(req, res) {
 /**
  * Connexion / inscription via Google (Google OAuth)
  */
+// async function googleLogin(req, res) {
+//   try {
+//     const { token, email, name } = req.body;
+
+//     if (!token || !email || !name) {
+//       return res
+//         .status(400)
+//         .json({ message: "Jeton et infos utilisateur requis" });
+//     }
+
+//     // ✅ CORRECTION 1 : On force l'e-mail reçu en minuscules
+//     const cleanEmail = email.toLowerCase().trim();
+
+
+//     const db = await connectDB();
+
+//     // 🔍 Vérifie si l'utilisateur existe déjà (inclut le rôle)
+//     const [existingUsers] = await db.execute(
+//       "SELECT id, name, email, password, role FROM users WHERE LOWER(email) = ?",
+//       [cleanEmail],
+//     );
+
+//     let user;
+//     let isCreated = false;
+
+//     if (existingUsers.length > 0) {
+//       user = existingUsers[0];
+//       console.log(`Utilisateur Google déjà existant : ${cleanEmail}`);
+//     } else {
+//       // ✅ Crée l'utilisateur avec role = 'user' par défaut
+//       const [result] = await db.execute(
+//         "INSERT INTO users (name, email, provider, role) VALUES (?, ?, 'google', 'user')",
+//         [name, cleanEmail],
+//       );
+
+//       const [newUser] = await db.execute(
+//         "SELECT id, name, email, role FROM users WHERE id = ?",
+//         [result.insertId],
+//       );
+//       user = newUser[0];
+//       isCreated = true;
+//       console.log(`Nouvel utilisateur Google créé : ${cleanEmail}`);
+//     }
+
+//     // 📦 JWT avec le rôle
+//     const payload = {
+//       id: user.id,
+//       email: user.email,
+//       name: user.name,
+//       role: user.role || "user", // 👈 Utilise le rôle de la BDD
+//     };
+
+//     const jwtToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
+//      // ✅ CORRECTION 3 : Log de contrôle strict avant envoi
+//     console.log("🔍 Rôle extrait de la BDD :", user.role);
+//     console.log("🔍 Rôle renvoyé au frontend:", user.role || "user");
+//     console.log("🔍 isAdmin calculé:", (user.role || "user") === "admin");
+//     return res.status(200).json({
+//       message: isCreated
+//         ? "Utilisateur Google créé et connecté avec succès"
+//         : "Utilisateur Google connecté avec succès",
+//       user: {
+//         id: user.id,
+//         email: user.email,
+//         name: user.name,
+//         role: user.role || "user", // 👈 Rôle renvoyé
+//         isAdmin: (user.role || "user") === "admin", // ajouter
+//       },
+//       token: jwtToken,
+//     });
+//   } catch (error) {
+//     console.error("Erreur dans googleLogin :", error);
+//     return res
+//       .status(500)
+//       .json({ message: "Erreur serveur lors de la connexion Google" });
+//   }
+// }
+const { OAuth2Client } = require('google-auth-library');
+// Initialisation du client Google en haut de votre fichier de contrôleur
+const client = new OAuth2Client("45806419430-ol7m0ort2aug9959rr7q9q3f5d4ja09b.apps.googleusercontent.com");
+
+/**
+ * Connexion / inscription via Google (Google OAuth sécurisé)
+ */
 async function googleLogin(req, res) {
   try {
-    const { token, email, name } = req.body;
+    const { token } = req.body; // Seul le token est requis du frontend !
 
-    if (!token || !email || !name) {
-      return res
-        .status(400)
-        .json({ message: "Jeton et infos utilisateur requis" });
+    if (!token) {
+      return res.status(400).json({ message: "Jeton Google manquant" });
     }
 
-    // ✅ CORRECTION 1 : On force l'e-mail reçu en minuscules
-    const cleanEmail = email.toLowerCase().trim();
-
+    // 1. Validation et décodage sécurisé du jeton Google côté serveur
+    const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: "45806419430-ol7m0ort2aug9959rr7q9q3f5d4ja09b.apps.googleusercontent.com",
+    });
+    
+    const payloadGoogle = ticket.getPayload();
+    const googleEmail = payloadGoogle.email.toLowerCase().trim();
+    const googleName = payloadGoogle.name;
 
     const db = await connectDB();
 
-    // 🔍 Vérifie si l'utilisateur existe déjà (inclut le rôle)
+    // 2. Recherche en BDD avec l'e-mail extrait du jeton Google
     const [existingUsers] = await db.execute(
-      "SELECT id, name, email, password, role FROM users WHERE LOWER(email) = ?",
-      [cleanEmail],
+      "SELECT id, name, email, role FROM users WHERE LOWER(email) = ?",
+      [googleEmail]
     );
 
     let user;
@@ -167,56 +255,57 @@ async function googleLogin(req, res) {
 
     if (existingUsers.length > 0) {
       user = existingUsers[0];
-      console.log(`Utilisateur Google déjà existant : ${cleanEmail}`);
+      console.log(`[BACKEND] Utilisateur trouvé. Rôle BDD : ${user.role}`);
     } else {
-      // ✅ Crée l'utilisateur avec role = 'user' par défaut
+      // Création automatique si absent avec role = 'user' par défaut
       const [result] = await db.execute(
         "INSERT INTO users (name, email, provider, role) VALUES (?, ?, 'google', 'user')",
-        [name, cleanEmail],
+        [googleName, googleEmail]
       );
-
-      const [newUser] = await db.execute(
-        "SELECT id, name, email, role FROM users WHERE id = ?",
-        [result.insertId],
-      );
-      user = newUser[0];
+      
+      user = { id: result.insertId, name: googleName, email: googleEmail, role: "user" };
       isCreated = true;
-      console.log(`Nouvel utilisateur Google créé : ${cleanEmail}`);
+      console.log(`[BACKEND] Nouvel utilisateur créé : ${googleEmail}`);
     }
 
-    // 📦 JWT avec le rôle
-    const payload = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role || "user", // 👈 Utilise le rôle de la BDD
-    };
+    // 3. Génération du JWT de VOTRE application contenant le rôle
+    const appToken = jwt.sign(
+      { 
+        id: user.id, 
+        email: user.email, 
+        name: user.name, 
+        role: user.role || "user" 
+      },
+      JWT_SECRET,
+      { expiresIn: "24h" }
+    );
 
-    const jwtToken = jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
-     // ✅ CORRECTION 3 : Log de contrôle strict avant envoi
-    console.log("🔍 Rôle extrait de la BDD :", user.role);
-    console.log("🔍 Rôle renvoyé au frontend:", user.role || "user");
-    console.log("🔍 isAdmin calculé:", (user.role || "user") === "admin");
+    // Logs de contrôle pour vos tests
+    console.log("🔍 Rôle extrait :", user.role);
+    console.log("🔍 Rôle renvoyé au frontend :", user.role || "user");
+    console.log("🔍 isAdmin calculé :", (user.role || "user") === "admin");
+
+    // 4. Envoi de la réponse complète et structurée au frontend
     return res.status(200).json({
       message: isCreated
         ? "Utilisateur Google créé et connecté avec succès"
         : "Utilisateur Google connecté avec succès",
       user: {
         id: user.id,
-        email: user.email,
         name: user.name,
-        role: user.role || "user", // 👈 Rôle renvoyé
-        isAdmin: (user.role || "user") === "admin", // ajouter
+        email: user.email,
+        role: user.role || "user",
+        isAdmin: (user.role === "admin")
       },
-      token: jwtToken,
+      token: appToken
     });
+
   } catch (error) {
-    console.error("Erreur dans googleLogin :", error);
-    return res
-      .status(500)
-      .json({ message: "Erreur serveur lors de la connexion Google" });
+    console.error("Erreur googleLogin :", error);
+    return res.status(500).json({ message: "Erreur serveur lors de la connexion Google" });
   }
 }
+
 
 /**
  * Connexion normale avec email/mot de passe

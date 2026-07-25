@@ -7,7 +7,7 @@ import { LocaleProvider } from "./contexts/LocaleContext.jsx";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <GoogleOAuthProvider clientId="385666932569-dj85vhevi0drutqt82rv1vc6ffnbuo7a.apps.googleusercontent.com">
+    <GoogleOAuthProvider clientId="45806419430-ol7m0ort2aug9959rr7q9q3f5d4ja09b.apps.googleusercontent.com">
       <LocaleProvider>
         <App />
       </LocaleProvider>

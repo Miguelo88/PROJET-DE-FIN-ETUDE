@@ -5,55 +5,55 @@ import { Footer } from "../composants/shared/Footer";
 import { Plane, Clock, Users, MapPin, Calendar, Heart } from "lucide-react";
 import { toggleFavorite, getFavorites } from "../utils/favoritesStorage";
 
-const getDateParts = (value) => {
-  if (!value) return null;
+// const getDateParts = (value) => {
+//   if (!value) return null;
 
-  const rawDate = String(value).trim();
-  const isoMatch = rawDate.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
-  if (isoMatch) {
-    const [, year, month, day] = isoMatch;
-    return {
-      day: String(day).padStart(2, "0"),
-      month: String(month).padStart(2, "0"),
-      year,
-    };
-  }
+//   const rawDate = String(value).trim();
+//   const isoMatch = rawDate.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$/);
+//   if (isoMatch) {
+//     const [, year, month, day] = isoMatch;
+//     return {
+//       day: String(day).padStart(2, "0"),
+//       month: String(month).padStart(2, "0"),
+//       year,
+//     };
+//   }
 
-  const europeanMatch = rawDate.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
-  if (europeanMatch) {
-    const [, day, month, year] = europeanMatch;
-    return {
-      day: String(day).padStart(2, "0"),
-      month: String(month).padStart(2, "0"),
-      year,
-    };
-  }
+//   const europeanMatch = rawDate.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+//   if (europeanMatch) {
+//     const [, day, month, year] = europeanMatch;
+//     return {
+//       day: String(day).padStart(2, "0"),
+//       month: String(month).padStart(2, "0"),
+//       year,
+//     };
+//   }
 
-  const parsedDate = new Date(rawDate);
-  if (!Number.isNaN(parsedDate.getTime())) {
-    return {
-      day: String(parsedDate.getDate()).padStart(2, "0"),
-      month: String(parsedDate.getMonth() + 1).padStart(2, "0"),
-      year: String(parsedDate.getFullYear()),
-    };
-  }
+//   const parsedDate = new Date(rawDate);
+//   if (!Number.isNaN(parsedDate.getTime())) {
+//     return {
+//       day: String(parsedDate.getDate()).padStart(2, "0"),
+//       month: String(parsedDate.getMonth() + 1).padStart(2, "0"),
+//       year: String(parsedDate.getFullYear()),
+//     };
+//   }
 
-  return null;
-};
+//   return null;
+// };
 
-const buildAviasalesSearchLink = (origin, destination, date) => {
-  const originCode = String(origin || "")
-    .trim()
-    .toUpperCase();
-  const destinationCode = String(destination || "")
-    .trim()
-    .toUpperCase();
-  const dateParts = getDateParts(date);
+// const buildAviasalesSearchLink = (origin, destination, date) => {
+//   const originCode = String(origin || "")
+//     .trim()
+//     .toUpperCase();
+//   const destinationCode = String(destination || "")
+//     .trim()
+//     .toUpperCase();
+//   const dateParts = getDateParts(date);
 
-  if (!originCode || !destinationCode || !dateParts) return null;
+//   if (!originCode || !destinationCode || !dateParts) return null;
 
-  return `https://www.aviasales.com/search/${originCode}${dateParts.day}${dateParts.month}${dateParts.year}${destinationCode}1`;
-};
+//   return `https://www.aviasales.com/search/${originCode}${dateParts.day}${dateParts.month}${dateParts.year}${destinationCode}1`;
+// };
 
 export function FlightDetails() {
   const { id } = useParams();
@@ -62,9 +62,13 @@ export function FlightDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
-
+  
   // État pour le favori
   const [isFavorite, setIsFavorite] = useState(false);
+  const passengers = searchParams.get("passengers") || "1";
+  const tripType = searchParams.get("tripType") || "round-trip";
+  const origin = searchParams.get("origin") || "CDG";
+  const destination = searchParams.get("destination") || "JFK";
 
   const date =
     searchParams.get("date") || new Date().toISOString().split("T")[0];
@@ -277,6 +281,24 @@ export function FlightDetails() {
     localStorage.setItem("favoriteFlights", JSON.stringify(updatedFavorites));
     return updatedFavorites;
   };
+  const handleBook = () => {
+  const currentUser = localStorage.getItem("currentUser");
+
+  if (!currentUser) {
+    navigate("/login", {
+      state: {
+        from: window.location.pathname,
+        flightToBook: flight,
+        message: "Connecte-toi pour réserver ce vol.",
+      },
+    });
+    return;
+  }
+
+  navigate(
+    `/Checkout?flightId=${flight.id}&origin=${origin}&destination=${destination}&date=${date}&passengers=${passengers}&tripType=${tripType}`
+  );
+};
 
   // État de chargement
   if (loading) {
@@ -461,7 +483,7 @@ export function FlightDetails() {
           </button>
         )} */}
 
-        {flight.bookingLink ? (
+        {/* {flight.bookingLink ? (
           <a
             href={flight.bookingLink}
             target="_blank"
@@ -494,7 +516,13 @@ export function FlightDetails() {
           >
             Réserver ce vol
           </button>
-        )}
+        )} */}
+        <button
+  onClick={handleBook}
+  className="w-full py-4 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg shadow-lg"
+>
+  Réserver ce vol
+</button>
 
         <p className="text-center text-sm text-gray-500 mt-4">
           Prix final à confirmer lors du paiement

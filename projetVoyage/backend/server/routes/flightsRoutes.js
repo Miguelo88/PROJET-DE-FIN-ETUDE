@@ -204,8 +204,8 @@ const buildAviasalesSearchLink = (origin, destination, date) => {
   const dateParts = getDateParts(date);
 
   if (!originCode || !destinationCode || !dateParts) return null;
-
-  return `https://www.aviasales.com/search/${originCode}${dateParts.day}${dateParts.month}${dateParts.year}${destinationCode}1`;
+  // suppresion d'un bout de code 
+  return `https://www.aviasales.com/search/${originCode}${dateParts.day}${dateParts.month}${destinationCode}1`;
 };
 
 // Fusionne les données du vol avec son prix

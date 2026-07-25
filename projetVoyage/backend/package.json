@@ -16,7 +16,7 @@
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "google-auth-library": "^10.6.2",
+    "google-auth-library": "^10.9.0",
     "mysql2": "^3.22.3",
     "node-cron": "^4.4.1",
     "nodemailer": "^9.0.1",
